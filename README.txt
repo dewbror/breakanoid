@@ -1,11 +1,11 @@
 Author: William Brorsson (sector, secty, sectyy, dewb)
 Date Created: Mars 26, 2025                                  
 
-Breakanoid
+Breakanoid 0.1.0
 
 DESCRIPTION
 
-    Creating a game called Breakanoid.
+    Creating a 2D game called Breakanoid using vulkan and SDL3. This is also a bit of a playground currently.
     
 HOW TO BUILD CMAKE
 
@@ -18,10 +18,10 @@ HOW TO BUILD CMAKE
 
 DEPENDENCIES
 
-    Vulkan SDK    1.4.304.1 https://vulkan.lunarg.com
-    SDL                     https://github.com/libsdl-org/SDL
-    CGLM                     https://github.com/recp/cglm
-    stb_image               https://github.com/nothings/stb
+    Vulkan SDK 1.4.304.1 https://vulkan.lunarg.com
+    SDL                  https://github.com/libsdl-org/SDL
+    CGLM                 https://github.com/recp/cglm
+    stb_image            https://github.com/nothings/stb
 
 TODO
 
