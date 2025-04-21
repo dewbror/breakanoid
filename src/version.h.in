@@ -1,0 +1,12 @@
+#ifndef VERSION_H_
+#define VERSION_H_
+#pragma once
+
+// clang-format off
+#define breakanoid_VERSION_MAJOR @breakanoid_VERSION_MAJOR@
+#define breakanoid_VERSION_MINOR @breakanoid_VERSION_MINOR@
+#define breakanoid_VERSION_PATCH @breakanoid_VERSION_PATCH@
+#define breakanoid_VERSION       "@breakanoid_VERSION@"
+#define GIT_BRANCH               "@GIT_BRANCH@"
+#define GIT_COMMIT_HASH          "@GIT_COMMIT_HASH@"
+#endif

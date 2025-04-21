@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# List of repos to clone
+REPOS=(
+    git@github.com:recp/cglm.git
+    git@github.com:libsdl-org/SDL.git
+    git@github.com:nothings/stb.git
+    git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+)
+
+# Dir to clone repos into
+TARGET_DIR="dep_repos"
+
+# Create target dir if it doesnt exist
+mkdir -p "$TARGET_DIR"
+
+# Function to clone repos
+clone_repo() {
+    local repo_url=$1
+    git clone "$repo_url" "$TARGET_DIR/$(basename "$repo_url" .git)"
+}
+
+# Iterate over the list of repos and clone them
+for repo in "${REPOS[@]}"; do
+    echo "Cloning $repo..."
+    clone_repo "$repo"
+done

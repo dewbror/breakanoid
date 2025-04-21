@@ -1,0 +1,14 @@
+This is txt file to record how the icon.res file is created using windres.
+
+Step 0: Have an .ico file
+Step 1:
+    Create icon.rc file which contains:
+        id ICON "path/to/ico/file"
+Step 2:
+    run the command:
+        windres icon.rc -O coff -o icon.res 
+    in terminal.
+Step 3:
+    When compiling your exe, include icon.res as argument to gcc.
+Step 4:
+    Done!
