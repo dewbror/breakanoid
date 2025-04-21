@@ -22,7 +22,6 @@ DEPENDENCIES
     SDL                     https://github.com/libsdl-org/SDL
     CGLM                     https://github.com/recp/cglm
     stb_image               https://github.com/nothings/stb
-    VMA                     https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
 
 TODO
 
