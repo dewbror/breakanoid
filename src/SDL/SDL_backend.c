@@ -40,6 +40,4 @@ static void SDL_DestroyWindow_wrapper(void *p_SDL_window) {
     printf("Callback: SDL_DestroyWindow_wrapper\n");
     // Destroy SDL window
     SDL_DestroyWindow((SDL_Window*)p_SDL_window);
-    // Cleanup all initialized SDL subsystems
-    SDL_Quit();
 }
