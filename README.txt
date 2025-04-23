@@ -5,7 +5,7 @@ Breakanoid 0.1.0
 
 DESCRIPTION
 
-    Creating a 2D game called Breakanoid using vulkan and SDL3. This is also a bit of a playground currently.
+    Breakanoid is an open source, 2D game written in C using vulkan 1.0 and SDL3. This is also a bit of a playground currently.
     
 HOW TO BUILD CMAKE
 
