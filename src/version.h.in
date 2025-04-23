@@ -1,3 +1,7 @@
+/*
+  version.h
+*/
+
 #ifndef VERSION_H_
 #define VERSION_H_
 #pragma once
@@ -9,4 +13,5 @@
 #define breakanoid_VERSION       "@breakanoid_VERSION@"
 #define GIT_BRANCH               "@GIT_BRANCH@"
 #define GIT_COMMIT_HASH          "@GIT_COMMIT_HASH@"
+#define GIT_COMMIT_HASH_SHORT    "@GIT_COMMIT_HASH_SHORT@"
 #endif

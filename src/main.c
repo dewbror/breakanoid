@@ -1,15 +1,14 @@
-/**
- * Author: William Brorsson
- * Date Created: April 17, 2025
- *
- * More info to come...
- *
- * main.c
- */
+/*
+  Author: William Brorsson
+  Date Created: April 17, 2025
+  
+  main.c
+*/
 
 #ifdef SYS_LINUX
 // #include <X11/Xlib.h> // <-- probably not needed.
 // https://registry.khronos.org/vulkan/specs/latest/man/html/WSIheaders.html
+#include <unistd.h>
 #else
 #ifdef SYS_WINNT
 #include <windows.h> // <-- needs to be included before std headers?
@@ -47,10 +46,10 @@ static bool _main() {
 #ifndef NDEBUG
     printf("THIS IS A DEBUG BUILD!\n");
 #endif
-    printf("Version %s+%s.%s\n", breakanoid_VERSION, GIT_BRANCH, GIT_COMMIT_HASH);
+    printf("Version %s+%s.%s\n\n", breakanoid_VERSION, GIT_BRANCH, GIT_COMMIT_HASH);
 
-    // Declare and zero initialize vulkan engine. Should i be using memset?
-    vulkan_engine engine = {};
+    // Ive decided to not zero initialize the vulkan_engine, it takes time and i want to write my code such that no field is used befor it should be used.
+    vulkan_engine engine;
     // memset(&engine, 0, sizeof(vulkan_engine));
     bool success = vulkan_engine_init(&engine);
     if(success) {
@@ -58,6 +57,13 @@ static bool _main() {
         // game;
         // game_run(game, &engine);
         // game_quit(game);
+    #ifdef SYS_WINNT
+        // Sleep(1e3);
+    #else
+    #ifdef SYS_LINUX
+        // sleep(1e3);
+    #endif
+    #endif
     }
     // Destroy vulkan engine
     vulkan_engine_destroy(&engine);

@@ -1,3 +1,7 @@
+/*
+  vulkan_engine.h
+*/
+
 #ifndef VULKAN_ENGINE_H_
 #define VULKAN_ENGINE_H_
 #pragma once
@@ -6,19 +10,22 @@
  * vk_engine.h
  */
 
+#include "types.h"
 #include "vulkan/vulkan_types.h"
-// I dont want to include deletion queue here but temporarilty doing so because i cant get the forward decleration to work.
-#include "util/deletion_queue.h"
-
-typedef struct {
-    VkImage *data;
+ 
+/**
+ * A struct containing a pointer to an array of VkImages and the size of the array in number of VkImages.
+ */
+typedef struct swapchain_images {
+    VkImage *p_data;
     uint32_t sz;
 } swapchain_images;
 
-typedef struct {
-    // Forward-decleration of deletion_queue not working :(
-    // struct deletion_queue *p_del_queue;
-    deletion_queue *p_main_delq; // Allocated on heap, move to stack?
+/**
+ * A struct containing all the necessary vulkan fields.
+ */
+typedef struct vulkan_engine {
+    struct deletion_queue *p_main_delq;
     struct SDL_Window *p_SDL_window;
     VkExtent2D window_extent;
     VkInstance instance;
@@ -33,9 +40,21 @@ typedef struct {
     swapchain_images swapchain_images;
     VkFormat swapChainImageFormat;
     VkExtent2D swapChainExtent;
-
 } vulkan_engine;
 
+/**
+ * Initiate the vulkan engine.
+ * 
+ * \param[in] p_engine Pointer to the vulkan_engine to be initiated. Must be deleted using vulkan_engine_destroy before exiting game.
+ * 
+ * \return True if successful, false if failed.
+ */
 bool vulkan_engine_init(vulkan_engine *p_engine);
+
+/**
+ * Used to delete a vulkan_engine. All deletion/destruction of objects is currently handled by the deletion queue. All this function does currently is flush the deletion queue.
+ * 
+ * \param[in] p_engine Pointer to the vulkan_engine.
+ */
 void vulkan_engine_destroy(vulkan_engine *p_engine);
 #endif // VULKAN_ENGINE_H_

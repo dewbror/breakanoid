@@ -1,12 +1,20 @@
-/**
- * SDL_backend.c
- */
+/*
+  SDL_backend.c
+*/
 
 #include "types.h"
+#include "vulkan/vulkan_engine.h"
 #include "SDL/SDL_backend.h"
 #include "util/deletion_queue.h"
 
+/**
+ * SDL_DestroyWindow wrapper for use in the deletion queue.
+ */
 static void SDL_DestroyWindow_wrapper(void *p_SDL_window);
+
+/**
+ * SDL_Quit wrapper for use in the deletion queue.
+ */
 static void SDL_Quit_wrapper(void *);
 
 bool init_SDL_backend(vulkan_engine *p_engine) {

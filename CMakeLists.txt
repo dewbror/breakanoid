@@ -35,11 +35,19 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# Get the current Git commit hash
+# Get the current Git commit hash (full)
 execute_process(
     COMMAND git rev-parse HEAD
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Get the current Git commit hash (short=7)
+execute_process(
+    COMMAND git rev-parse --short=7 HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_HASH_SHORT
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
@@ -69,7 +77,7 @@ add_executable(breakanoid src/main.c src/vulkan/vulkan_engine.c src/SDL/SDL_back
 
 # Add dependencies
 add_subdirectory(${SDL3_DIR} EXCLUDE_FROM_ALL ${CMAKE_BINARY_DIR}/SDL3)
-add_subdirectory(${cglm_DIR} ${CMAKE_BINARY_DIR}/cglm)
+add_subdirectory(${cglm_DIR} ${CMAKE_BINARY_DIR}/cglm EXCLUDE_FROM_ALL)
 
 target_include_directories(breakanoid SYSTEM PRIVATE ${Vulkan_INCLUDE_DIR})
 target_include_directories(breakanoid SYSTEM PRIVATE ${cglm_DIR}/include)

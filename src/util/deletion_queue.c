@@ -1,6 +1,6 @@
-/**
- * deletion_queue.c
- */
+/*
+  deletion_queue.c
+*/
 
 #include "types.h"
 #include "util/deletion_queue.h"

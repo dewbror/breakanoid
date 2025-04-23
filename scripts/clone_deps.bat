@@ -26,7 +26,6 @@ if not exist %TARGET_DIR% (
 for %%r in ("git@github.com:recp/cglm.git"
             "git@github.com:libsdl-org/SDL.git" 
             "git@github.com:nothings/stb.git"
-            "git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git"
            ) do (
     echo Cloning %%r...
     call :clone_repo %%r

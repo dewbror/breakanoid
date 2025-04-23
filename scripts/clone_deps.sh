@@ -5,7 +5,6 @@ REPOS=(
     git@github.com:recp/cglm.git
     git@github.com:libsdl-org/SDL.git
     git@github.com:nothings/stb.git
-    git@github.com:GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
 )
 
 # Dir to clone repos into

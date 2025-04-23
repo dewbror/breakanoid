@@ -1,4 +1,4 @@
-This is txt file to record how the icon.res file is created using windres.
+This is a txt file to record how the icon.res file is created using windres.
 
 Step 0: Have an .ico file
 Step 1:
