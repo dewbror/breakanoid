@@ -6,10 +6,6 @@
 #define VULKAN_ENGINE_H_
 #pragma once
 
-/**
- * vk_engine.h
- */
-
 #include "types.h"
 #include "vulkan/vulkan_types.h"
  
@@ -17,7 +13,8 @@
  * A struct containing a pointer to an array of VkImages and the size of the array in number of VkImages.
  */
 typedef struct swapchain_images {
-    VkImage *p_data;
+    VkImage *p_images;
+    VkImageView *p_image_views;
     uint32_t sz;
 } swapchain_images;
 
@@ -38,8 +35,8 @@ typedef struct vulkan_engine {
     VkSampleCountFlagBits msaa_samples;
     VkSwapchainKHR swapchain;
     swapchain_images swapchain_images;
-    VkFormat swapChainImageFormat;
-    VkExtent2D swapChainExtent;
+    VkFormat swapchain_image_format;
+    VkExtent2D swapchain_extent;
 } vulkan_engine;
 
 /**

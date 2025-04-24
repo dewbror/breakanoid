@@ -10,12 +10,12 @@ deletion_queue *deletion_queue_alloc() {
     // TODO: Create my own malloc
     if(!p_queue) {
         printf("Failed to allocate deletion queue.");
-        return nullptr;
+        return NULL;
     }
     // Memset not necessary since we are setting the field members directly after allocation
     // memset(p_queue, 0, sizeof(deletion_queue));
-    p_queue->p_first = nullptr;
-    p_queue->p_last = nullptr;
+    p_queue->p_first = NULL;
+    p_queue->p_last = NULL;
     printf("Deletion queue allocated\n");
     return p_queue;
 }
@@ -29,7 +29,7 @@ bool deletion_queue_queue(deletion_queue *p_queue, void *p_resource, void (*dele
     }
     // memset(p_new_node, 0, sizeof(deletion_node));
     p_new_node->p_resource = p_resource;
-    p_new_node->p_prev = nullptr;
+    p_new_node->p_prev = NULL;
     p_new_node->delete_func = delete_func;
 
     if(p_queue->p_last) {
@@ -43,7 +43,7 @@ bool deletion_queue_queue(deletion_queue *p_queue, void *p_resource, void (*dele
 
 void deletion_queue_flush(deletion_queue *p_queue) {
     if(!p_queue) {
-        printf("Deletion queue is NULL or nullptr\n");
+        printf("Deletion queue is NULL\n");
         return;
     }
     printf("\nFlushing deletion queue\n");

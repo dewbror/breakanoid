@@ -8,8 +8,8 @@ cmake_minimum_required(VERSION 3.5)
 project(breakanoid VERSION 0.1.0 LANGUAGES C)
 
 # specify C++ standard
-set(CMAKE_C_STANDARD 23)
-# Without extensions False will set standard to gnu23 isntead of c23.
+set(CMAKE_C_STANDARD 99)
+# Without extensions False will set standard to gnu99 isntead of c99.
 set(CMAKE_C_EXTENSIONS False)
 set(CMAKE_C_STANDARD_REQUIRED True)
 

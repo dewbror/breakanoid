@@ -6,10 +6,6 @@
 #define VULKAN_TYPES_H_
 #pragma once
 
-/**
- * vk_types.h
- */
-
 #include "types.h"
 
 // Vulkan headers

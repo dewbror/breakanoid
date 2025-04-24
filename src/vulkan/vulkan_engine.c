@@ -130,6 +130,7 @@ static void DestroyDebugUtilsMessengerEXT_wrapper(void *p_engine);
  * \return True if successful, false if failed.
  */
 static bool pick_physical_device(vulkan_engine *p_engine);
+
 static bool is_device_suitable(vulkan_engine *p_engine, VkPhysicalDevice device);
 static bool find_queue_families(vulkan_engine *p_engine, VkPhysicalDevice device, queue_family_indices *q_fam_indices);
 static bool check_device_extension_support(VkPhysicalDevice device);
@@ -142,6 +143,9 @@ static bool create_swapchain(vulkan_engine *p_engine);
 static VkSurfaceFormatKHR choose_swapchain_surface_format(VkSurfaceFormatKHR *formats, size_t formats_count);
 static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR *present_modes, size_t present_modes_count);
 static VkExtent2D choose_swapchain_extent(vulkan_engine *p_engine, VkSurfaceCapabilitiesKHR capabilities);
+
+static bool create_image_views(vulkan_engine *p_engine);
+static VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags, uint32_t mip_levels);
 
 bool vulkan_engine_init(vulkan_engine *p_engine) {
     
@@ -194,6 +198,12 @@ bool vulkan_engine_init(vulkan_engine *p_engine) {
         return false;
     }
 
+    // Create image views
+    // if(!create_image_views(p_engine)) {
+    //     printf("Failed to create image views\n");
+    //     return false;
+    // }
+
     // Just playing around with cglm
     // vec3 vectorX = {1.0f, .0f, .0f};
     // vec3 vectorZ = {.0f, .0f, 1.0f};
@@ -223,11 +233,11 @@ static bool create_instance(vulkan_engine *p_engine) {
     // Retrieve a list of supported extensions before creating an instance.
     // Request just the number of extensions.
     uint32_t extension_count;
-    vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &extension_count, nullptr);
+    vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &extension_count, VK_NULL_HANDLE);
     VkExtensionProperties *extensions = (VkExtensionProperties*)malloc(extension_count*sizeof(VkExtensionProperties));
 
     // Query the extension details.
-    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, extensions);
+    vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &extension_count, extensions);
 
     printf("\nAvailable extensions:\n");
     for(uint32_t i = 0; i < extension_count; ++i) {
@@ -237,7 +247,7 @@ static bool create_instance(vulkan_engine *p_engine) {
     // Free extensions array
     free(extensions);
 
-    VkApplicationInfo app_info  = {};
+    VkApplicationInfo app_info  = {0};
     app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     app_info.pApplicationName   = "Breakanoid";
     app_info.applicationVersion = VK_MAKE_VERSION(breakanoid_VERSION_MAJOR, breakanoid_VERSION_MINOR, breakanoid_VERSION_PATCH);
@@ -245,7 +255,7 @@ static bool create_instance(vulkan_engine *p_engine) {
     app_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
     app_info.apiVersion         = VK_API_VERSION_1_0;
 
-    VkInstanceCreateInfo create_inst_info = {};
+    VkInstanceCreateInfo create_inst_info = {0};
     create_inst_info.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_inst_info.pApplicationInfo = &app_info;
 
@@ -255,7 +265,7 @@ static bool create_instance(vulkan_engine *p_engine) {
     create_inst_info.enabledExtensionCount   = count_required_extensions;
     create_inst_info.ppEnabledExtensionNames = req_extensions;
 
-    VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {};
+    VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};
 
     // Include validation layer names if they are enabled.
     if(enable_validation_layers) {
@@ -350,9 +360,13 @@ static void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfo
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT /*message_severity*/, VkDebugUtilsMessageTypeFlagsEXT /*message_type*/,
-    const VkDebugUtilsMessengerCallbackDataEXT *p_callback_data, void * /*p_user_data*/) {
-
+    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type,
+    const VkDebugUtilsMessengerCallbackDataEXT *p_callback_data, void *p_user_data) {
+    // UNUSED
+    (void)message_severity;
+    (void)message_type;
+    (void)p_user_data;
+    
     // The first parameter specifies the severity of the message, which is one of the following flags:
     // VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: Diagnostic message.
     // VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: Informational message like the creation of a resource.
@@ -394,7 +408,7 @@ static bool setup_debug_messenger(vulkan_engine *p_engine) {
         return true;
 
     // Fill struct with details about the messenger and its callback.
-    VkDebugUtilsMessengerCreateInfoEXT create_info = {};
+    VkDebugUtilsMessengerCreateInfoEXT create_info = {0};
     populate_debug_messenger_create_info(&create_info);
 
     // This struct should be passed to the vkCreateDebugUtilsMessengerEXT function to create the
@@ -416,8 +430,8 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugU
     const VkAllocationCallbacks *p_allocator, VkDebugUtilsMessengerEXT *p_debug_messenger) {
     // Look up address of vkCreateDebugUtilsMessengerEXT
     PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    // return it if not nullptr, else return error extension not present.
-    if(func != nullptr) {
+    // return it if not NULL, else return error extension not present.
+    if(func != VK_NULL_HANDLE) {
         return func(instance, p_create_info, p_allocator, p_debug_messenger);
     } else {
         return VK_ERROR_EXTENSION_NOT_PRESENT;
@@ -427,10 +441,11 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugU
 static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger,
     const VkAllocationCallbacks *p_allocator) {
     // Make sure that this function is either a static class function or a function outside the class.
+
     // Look up address of vkDestroyDebugUtilsMessengerEXT
     PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    // return it if not nullptr
-    if(func != nullptr)
+    // return it if not NULL
+    if(func != VK_NULL_HANDLE)
         func(instance, debug_messenger, p_allocator);
 }
 
@@ -488,7 +503,7 @@ static bool is_device_suitable(vulkan_engine *p_engine, VkPhysicalDevice device)
     printf("Device supported Vulkan version: %u.%u.%u.%u\n", VK_API_VERSION_VARIANT(device_properties.apiVersion), VK_API_VERSION_MAJOR(device_properties.apiVersion), VK_API_VERSION_MINOR(device_properties.apiVersion), VK_API_VERSION_PATCH(device_properties.apiVersion));
 
     // Check if graphics and present queue families are supported by device
-    queue_family_indices q_fam_indices = {};
+    queue_family_indices q_fam_indices = {0};
     if(!find_queue_families(p_engine, device, &q_fam_indices)) {
         printf("Required queue families not supported by device\n");
         return false;
@@ -500,7 +515,7 @@ static bool is_device_suitable(vulkan_engine *p_engine, VkPhysicalDevice device)
         return false;
     }
 
-    swapchain_support_details swapchain_support = {};
+    swapchain_support_details swapchain_support = {0};
     bool swapchain_adequate = query_swapchain_support(p_engine, device, &swapchain_support);
     // Swap chain support is sufficient for this tutorial if there is at least one supported image format and
     // one supported presentation mode given the window surface we have.
@@ -593,7 +608,7 @@ static bool query_swapchain_support(vulkan_engine *p_engine, VkPhysicalDevice de
 
     // Query supported surface formats.
     uint32_t formats_count;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, p_engine->surface, &formats_count, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, p_engine->surface, &formats_count, VK_NULL_HANDLE);
     if(formats_count != 0) {
         p_details->formats = (VkSurfaceFormatKHR*)malloc(formats_count*sizeof(VkSurfaceFormatKHR));
         vkGetPhysicalDeviceSurfaceFormatsKHR(device, p_engine->surface, &formats_count, p_details->formats);
@@ -624,7 +639,7 @@ static void free_wrapper(void *p_mem) {
 }
 
 static bool create_logical_device(vulkan_engine *p_engine) {
-    queue_family_indices q_fam_indices = {};
+    queue_family_indices q_fam_indices = {0};
     if(!find_queue_families(p_engine, p_engine->physical_device, &q_fam_indices)) {
         printf("required queue families not found\n");
         return false;
@@ -650,7 +665,7 @@ static bool create_logical_device(vulkan_engine *p_engine) {
     VkDeviceQueueCreateInfo *q_create_infos = (VkDeviceQueueCreateInfo*)malloc(unique_q_fams_count*sizeof(VkDeviceQueueCreateInfo));
     float q_priority = 1.0f;
     for(uint32_t i = 0; i < unique_q_fams_count; ++i) {
-        VkDeviceQueueCreateInfo q_create_info = {};
+        VkDeviceQueueCreateInfo q_create_info = {0};
         q_create_info.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         q_create_info.queueFamilyIndex = unique_q_fams[i]; // <-- Which queue family do we want
         q_create_info.queueCount       = 1;                // <-- How many queues of this queue family do we want to create?
@@ -658,11 +673,11 @@ static bool create_logical_device(vulkan_engine *p_engine) {
         q_create_infos[i] = q_create_info;
     }
 
-    VkPhysicalDeviceFeatures device_features = {};
+    VkPhysicalDeviceFeatures device_features = {0};
     device_features.samplerAnisotropy = VK_FALSE;
     device_features.sampleRateShading = VK_FALSE; // enable sample shading feature for the device
     // Now we can start filling the main VkDeviceCreateInfo strucutre.
-    VkDeviceCreateInfo create_dev_info = {};
+    VkDeviceCreateInfo create_dev_info = {0};
     create_dev_info.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     create_dev_info.pQueueCreateInfos    = q_create_infos;
     create_dev_info.queueCreateInfoCount = unique_q_fams_count;
@@ -690,7 +705,7 @@ static bool create_logical_device(vulkan_engine *p_engine) {
 }
 
 static bool create_swapchain(vulkan_engine *p_engine) {
-    swapchain_support_details swapchain_support = {};
+    swapchain_support_details swapchain_support = {0};
     if(!query_swapchain_support(p_engine, p_engine->physical_device, &swapchain_support)) {
         printf("Physical device does not support swapchain\n");
         return false;
@@ -713,7 +728,7 @@ static bool create_swapchain(vulkan_engine *p_engine) {
     }
 
     // Lets create the swap chain object, the Vulkan way, with a create info struct ofc!
-    VkSwapchainCreateInfoKHR create_swapchain_info = {};
+    VkSwapchainCreateInfoKHR create_swapchain_info = {0};
     create_swapchain_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     // Here we specify which surface the swap chain is tied to.
     create_swapchain_info.surface = p_engine->surface;
@@ -733,7 +748,7 @@ static bool create_swapchain(vulkan_engine *p_engine) {
     // first to perform operations like post-processing. In that case you may use a value like
     // VK_IMAGE_USAGE_TRANSFER_DST_BIT instead and use a memory operation to transfer the rendered image to a swap
     // chain image.
-    queue_family_indices q_fam_indices = {};
+    queue_family_indices q_fam_indices = {0};
     find_queue_families(p_engine, p_engine->physical_device, &q_fam_indices);
 
     uint32_t q_fam_indices_array[] = {q_fam_indices.graphics_family, q_fam_indices.present_family};
@@ -779,15 +794,14 @@ static bool create_swapchain(vulkan_engine *p_engine) {
     // finally call it again to retrieve the handles.
     vkGetSwapchainImagesKHR(p_engine->device, p_engine->swapchain, &image_count, VK_NULL_HANDLE);
 
-    p_engine->swapchain_images.p_data = (VkImage*)malloc(image_count*sizeof(VkImage));
+    p_engine->swapchain_images.p_images = (VkImage*)malloc(image_count*sizeof(VkImage));
     p_engine->swapchain_images.sz = image_count;
-    deletion_queue_queue(p_engine->p_main_delq, p_engine->swapchain_images.p_data, free_wrapper);
+    deletion_queue_queue(p_engine->p_main_delq, p_engine->swapchain_images.p_images, free_wrapper);
 
-    vkGetSwapchainImagesKHR(p_engine->device, p_engine->swapchain, &image_count, p_engine->swapchain_images.p_data);
-    // Store the format and extent we’ve chosen for the swap chain images in member variables. We’ll need them in
-    // future chapters.
-    p_engine->swapChainImageFormat = surface_format.format;
-    p_engine->swapChainExtent      = extent;
+    vkGetSwapchainImagesKHR(p_engine->device, p_engine->swapchain, &image_count, p_engine->swapchain_images.p_images);
+    // Store the format and extent we’ve chosen for the swap chain images in member variables.
+    p_engine->swapchain_image_format = surface_format.format;
+    p_engine->swapchain_extent       = extent;
 
     // These are allocated in query swapchain support and must be freed!!! not ideal solution.
     free(swapchain_support.formats);
@@ -872,4 +886,18 @@ static VkExtent2D choose_swapchain_extent(vulkan_engine *p_engine, VkSurfaceCapa
 
         return actual_extent;
     }
+}
+
+static bool create_image_views(vulkan_engine *p_engine) {
+    p_engine->swapchain_images.p_image_views = (VkImageView*)malloc(p_engine->swapchain_images.sz*sizeof(VkImageView));
+    deletion_queue_queue(p_engine->p_main_delq, p_engine->swapchain_images.p_image_views, free_wrapper);
+
+    for(uint32_t i = 0; i < p_engine->swapchain_images.sz; ++i) {
+        p_engine->swapchain_images.p_image_views[i] = create_image_view(p_engine->swapchain_images.p_images[i], p_engine->swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+    }
+}
+
+static VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags, uint32_t mip_levels) {
+    VkImageViewCreateInfo view_info = {0};
+    return NULL;
 }

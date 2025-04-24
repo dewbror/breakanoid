@@ -4,18 +4,12 @@ Date Created: Mars 26, 2025
 Breakanoid 0.1.0
 ----------------
 
-Breakanoid is an open source, 2D game written in C using vulkan 1.0 and SDL3.
-
-I'm currently writing the game using features from C23, however, I am also trying to keep it compatible with C99.
-
-Features used from C23
-----------------------
-    nullptr
+Breakanoid is an open source, 2D game written in C99 using vulkan 1.0 and SDL3.
 
 How to build with cmake
 -----------------------
 
-Run the clone_deps.bat/.sh scripts to clone dependencies into project directory.
+Run the clone_deps.bat/.sh script to clone dependencies into project directory.
 You must have the vulkan SDK installed.
 
     mkdir build
@@ -41,6 +35,6 @@ TODO
 License
 -------
 
-This code is licensed under the zlib license.
+The source code in this repository is licensed under the zlib License, see LICENSE. This license applies only to the source code files.
 
 --- end of README ---

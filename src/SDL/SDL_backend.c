@@ -23,7 +23,7 @@ bool init_SDL_backend(vulkan_engine *p_engine) {
         printf("Failed to initialize SDL library. Error: %s", SDL_GetError());
         return false;
     }
-    deletion_queue_queue(p_engine->p_main_delq, nullptr, SDL_Quit_wrapper);
+    deletion_queue_queue(p_engine->p_main_delq, NULL, SDL_Quit_wrapper);
 
     // Create SDL window
     SDL_WindowFlags windowFlags =

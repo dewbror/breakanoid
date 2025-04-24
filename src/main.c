@@ -27,14 +27,24 @@
 static bool _main();
 
 #ifdef SYS_WINNT
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
+    // UNUSED
+    (void)hInstance;
+    (void)hPrevInstance;
+    (void)pCmdLine;
+    (void)nCmdShow;
+
     if(!_main())
         return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
 #else
 #ifdef SYS_LINUX
-int main(int, char **) {
+int main(int argc, char **argv) {
+    // UNUSED
+    (void)argc;
+    (void)argv;
+    
     if(!_main())
         return EXIT_FAILURE;
     return EXIT_SUCCESS;
