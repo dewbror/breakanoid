@@ -1,4 +1,4 @@
-Author: William Brorsson (sector, secty, sectyy, dewb)
+Author: William Brorsson
 Date Created: Mars 26, 2025
 
 Breakanoid 0.1.0
