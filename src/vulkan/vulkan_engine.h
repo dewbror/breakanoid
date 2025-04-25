@@ -15,7 +15,7 @@
 typedef struct swapchain_images {
     VkImage *p_images;
     VkImageView *p_image_views;
-    uint32_t sz;
+    uint32_t images_count;
 } swapchain_images;
 
 /**
