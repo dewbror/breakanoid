@@ -29,7 +29,6 @@ Build with Ninja Multi-Config
   cmake --build build --config Debug
   cmake --build build --config RelWithDebInfo
 
-
 Dependencies
 ------------
 

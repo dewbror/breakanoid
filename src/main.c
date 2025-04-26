@@ -23,6 +23,7 @@
 #include "types.h"
 #include "version.h"
 #include "vulkan/vulkan_engine.h"
+#include "game/game.h"
 
 static bool _main();
 
@@ -64,16 +65,10 @@ static bool _main() {
     bool success = vulkan_engine_init(&engine);
     if(success) {
         printf("Vulkan engine initialized\n");
-        // game;
-        // game_run(game, &engine);
-        // game_quit(game);
-    #ifdef SYS_WINNT
-        // Sleep(1e3);
-    #else
-    #ifdef SYS_LINUX
-        // sleep(1e3);
-    #endif
-    #endif
+        // Havent decided weather to zero initiate this struct or not.
+        game_s game;
+        game_run(&engine, &game);
+        game_destroy(&game);
     }
     // Destroy vulkan engine
     vulkan_engine_destroy(&engine);

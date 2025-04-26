@@ -63,7 +63,7 @@ set(stb_DIR                   "dep_repos/stb")
 find_package(Vulkan REQUIRED)
 
 # Add executable
-add_executable(breakanoid src/main.c src/vulkan/vulkan_engine.c src/SDL/SDL_backend.c src/util/deletion_queue.c)
+add_executable(breakanoid src/main.c src/vulkan/vulkan_engine.c src/SDL/SDL_backend.c src/util/deletion_queue.c src/game/game.c)
 
 
 # Disable unnecessary SDL3 features to reduce build size (dep_repos/SDL/CMakeLists.txt:250-274)
