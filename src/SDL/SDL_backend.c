@@ -15,7 +15,7 @@ static void SDL_DestroyWindow_wrapper(void *p_SDL_window);
 /**
  * SDL_Quit wrapper for use in the deletion queue.
  */
-static void SDL_Quit_wrapper(void *);
+static void SDL_Quit_wrapper(void *p_not_used);
 
 bool init_SDL_backend(vulkan_engine *p_engine) {
     // Initialize SDL
@@ -38,7 +38,7 @@ bool init_SDL_backend(vulkan_engine *p_engine) {
     return true;
 }
 
-static void SDL_Quit_wrapper(void *) {
+static void SDL_Quit_wrapper(void *p_not_used) {
     printf("Callback: SDL_Quit_wrapper\n");
     // Cleanup all initialized SDL subsystems
     SDL_Quit();
