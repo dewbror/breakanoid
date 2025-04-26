@@ -16,7 +16,7 @@ GIMP
 aseprite
 deps
 *.log
-*version.hpp
+src/version.h
 *.spv
 blender
 dep_repos
