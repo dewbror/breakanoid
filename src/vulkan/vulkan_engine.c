@@ -135,7 +135,7 @@ static bool pick_physical_device(vulkan_engine *p_engine);
  * Check if a physical device is suitable for the application. It checks if the required device extensions are supported, if the required queue families (graphic and present) are available and if the swapchain supports is adequate.
  * 
  * \param[in] p_engine Pointer to vulkan_engine.
- * \param[in] device The physical device that is checked for suitablility.
+ * \param[in] device   The physical device that is checked for suitablility.
  * 
  * \return True if the device is suitable, false if it is not.
  */
@@ -144,8 +144,8 @@ static bool is_device_suitable(vulkan_engine *p_engine, VkPhysicalDevice device)
 /**
  * Check for and fetches the graphics queue family index and the present queue family index and stores them in a swapchain_support_details struct.
  * 
- * \param[in] p_engine Pointer to the vulkan_engine.
- * \param[in] device The physical device from wich the queuf family indeices are fetched from.
+ * \param[in] p_engine       Pointer to the vulkan_engine.
+ * \param[in] device         The physical device from wich the queuf family indeices are fetched from.
  * \param[out] q_fam_indices Pointer to a queue_family_indices struct which stores the indices if they are found.
  * 
  * \return True if both a grapics queue family and a present queue family was found.
@@ -164,8 +164,8 @@ static bool check_device_extension_support(VkPhysicalDevice device);
 /**
  * Check if the devices swapchain has the required support (which is just that it has non-zero formats and non-zero present modes). It also stores the formats and present modes in the swapchain_support_details struct. This struct has dynamically allocated arrays in it and must be freed at some point after calling this funciton.
  * 
- * \param[in] p_engine Pointer to the vulkna_engine.
- * \param[in] device The physical device being checked for swapchain support.
+ * \param[in] p_engine           Pointer to the vulkna_engine.
+ * \param[in] device             The physical device being checked for swapchain support.
  * \param[out] swapchain_support Pointer to a swapchain_support_details struct which stores the swapchain formats and present modes.
  * 
  * \return True if the swapchain has support, false if not.
@@ -198,7 +198,7 @@ static bool create_swapchain(vulkan_engine *p_engine);
 /**
  * Choose the swapchain surface format.
  * 
- * \param[in] p_formats Array of supported swapchain surface formats.
+ * \param[in] p_formats     Array of supported swapchain surface formats.
  * \param[in] formats_count Number of elements in the formats array.
  * 
  * \return The choosen swapchain surface format.
@@ -208,7 +208,7 @@ static VkSurfaceFormatKHR choose_swapchain_surface_format(VkSurfaceFormatKHR *p_
 /**
  * Choose the swapchain present mode.
  * 
- * \param[in] p_present_modes Array of supported swapchain present modes.
+ * \param[in] p_present_modes     Array of supported swapchain present modes.
  * \param[in] present_modes_count Number of elements in the present modes array.
  * 
  * \return The chosen present mode.
@@ -218,7 +218,7 @@ static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR *p_presen
 /**
  * Choose the swapchain extent. This is chosen to the pixel size given by SDL_GetWindowSizeInPixels. This is fairly straight forward except for when the display is a "high pixel density display" in which case the pixel size can be large than the screen coordinates. SDL_GetWindowSizeInPixels should get the actual pixel size and not the screen coordiantes.
  * 
- * \param[in] p_engine Pointer to the vulkan_engine.
+ * \param[in] p_engine     Pointer to the vulkan_engine.
  * \param[in] capabilities The swapchain surface capabilities.
  * 
  * \return The chosen swapchain extent. If the SDL_GetWindowSizeInPixels the extent will have 0 width and height.
@@ -244,8 +244,8 @@ static bool create_image_views(vulkan_engine *p_engine);
 /**
  * Create and image view for an image.
  * 
- * \param[in] image The image for which the image view is created.
- * \param[in] format The format of the image view.
+ * \param[in] image        The image for which the image view is created.
+ * \param[in] format       The format of the image view.
  * \param[in] aspect_flags
  * \param[in] mip_levels
  * 
@@ -906,7 +906,7 @@ static bool create_swapchain(vulkan_engine *p_engine) {
         return false;
     }
     deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroySwapchainKHR_wrapper);
-    
+
     // The swap chain has been created now, so all that remains is retrieving the handles of the VkImages in it.
     // We’ll reference these during rendering operations in later chapters. The images were created by the
     // implementation for the swap chain and they will be automatically cleaned up once the swap chain has been
