@@ -9,13 +9,26 @@ Breakanoid is an open source, 2D game written in C99 using vulkan 1.0 and SDL3.
 How to build with cmake
 -----------------------
 
-Run the clone_deps.bat/.sh script to clone dependencies into project directory. You must have the vulkan SDK installed.
-Run the following commands in decending order.
+Run the clone_deps.bat/.sh script to clone dependencies into project directory. You must also have the vulkan SDK installed.
 
-  mkdir build
-  cd build
-  cmake ..
-  cmake --build .
+Build release ("-O3 -DNDEBUG")
+  cmake -DCMAKE_BUILD_TYPE=Release -S . -B build_release
+  cmake --build build_release 
+
+Build debug ("-ggdb3 -O0")
+  cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build_debug
+  cmake --build build_debug
+
+Build release with debug info ("-ggdb3 -O2")
+  cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -S . -B build_relwithdebinfo
+  cmake --build build_relwithdebinfo
+
+Build with Ninja Multi-Config
+  cmake -DCMAKE_DEFAULT_BUILD_TYPE=Debug -G "Ninja Multi-Config" -S . -B build
+  cmake --build build --config Release
+  cmake --build build --config Debug
+  cmake --build build --config RelWithDebInfo
+
 
 Dependencies
 ------------

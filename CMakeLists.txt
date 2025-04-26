@@ -13,19 +13,9 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_EXTENSIONS False)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-# if(NOT CMAKE_BUILD_TYPE)
-#     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build (Debug or Release)" FORCE)
-# endif()
-# message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")# "MinSizeRel" "RelWithDebInfo")
-endif()
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-
 set(CMAKE_C_FLAGS_DEBUG "-ggdb3 -O0")
-set(CMAKE_C_FLAGS_RELEASE "-O3")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-ggdb3 -O2")
 
 # Get the current Git branch
 execute_process(
@@ -74,6 +64,20 @@ find_package(Vulkan REQUIRED)
 
 # Add executable
 add_executable(breakanoid src/main.c src/vulkan/vulkan_engine.c src/SDL/SDL_backend.c src/util/deletion_queue.c)
+
+
+# Disable unnecessary SDL3 features to reduce build size (dep_repos/SDL/CMakeLists.txt:250-274)
+set(SDL_AUDIO_DEFAULT      OFF CACHE BOOL "Disable SDL audio support")
+# set(SDL_VIDEO_DEFAULT      OFF CACHE BOOL "Disable SDL video support")
+set(SDL_GPU_DEFAULT        OFF CACHE BOOL "Disable SDL GPU support")
+set(SDL_RENDER_DEFAULT     OFF CACHE BOOL "Disable SDL render support")
+set(SDL_CAMERA_DEFAULT     OFF CACHE BOOL "Disable SDL camera support")
+set(SDL_JOYSTICK_DEFAULT   OFF CACHE BOOL "Disable SDL joystick support")
+set(SDL_HAPTIC_DEFAULT     OFF CACHE BOOL "Disable SDL haptic support")
+set(SDL_HIDAPI_DEFAULT     OFF CACHE BOOL "Disable SDL hidapi support")
+set(SDL_POWER_DEFAULT      OFF CACHE BOOL "Disable SDL power support")
+set(SDL_SENSOR_DEFAULT     OFF CACHE BOOL "Disable SDL sensor support")
+set(SDL_DIALOG_DEFAULT     OFF CACHE BOOL "Disable SDL locale support")
 
 # Add dependencies
 add_subdirectory(${SDL3_DIR} EXCLUDE_FROM_ALL ${CMAKE_BINARY_DIR}/SDL3)
