@@ -18,4 +18,4 @@ typedef struct game_s {
 
 bool game_run(struct vulkan_engine *p_engine, game_s *p_game);
 bool game_destroy(game_s *p_game);
-#endif //GAME_H_
+#endif // GAME_H_

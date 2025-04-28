@@ -12,9 +12,9 @@
 
 /**
  * Initiate the SDL "backend".
- * 
+ *
  * \param[in] p_engine Pointer to the vulkan engine.
- * 
+ *
  * \return True if successful, false if failed.
  */
 bool init_SDL_backend(struct vulkan_engine *p_engine);

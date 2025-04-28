@@ -8,7 +8,7 @@
 
 #include "types.h"
 #include "vulkan/vulkan_types.h"
- 
+
 /**
  * A struct containing a pointer to an array of VkImages and the size of the array in number of VkImages.
  */
@@ -41,16 +41,18 @@ typedef struct vulkan_engine {
 
 /**
  * Initiate the vulkan engine.
- * 
- * \param[in] p_engine Pointer to the vulkan_engine to be initiated. Must be deleted using vulkan_engine_destroy before exiting game.
- * 
+ *
+ * \param[in] p_engine Pointer to the vulkan_engine to be initiated. Must be deleted using vulkan_engine_destroy before
+ * exiting game.
+ *
  * \return True if successful, false if failed.
  */
 bool vulkan_engine_init(vulkan_engine *p_engine);
 
 /**
- * Used to delete a vulkan_engine. All deletion/destruction of objects is currently handled by the deletion queue. All this function does currently is flush the deletion queue.
- * 
+ * Used to delete a vulkan_engine. All deletion/destruction of objects is currently handled by the deletion queue. All
+ * this function does currently is flush the deletion queue.
+ *
  * \param[in] p_engine Pointer to the vulkan_engine.
  */
 void vulkan_engine_destroy(vulkan_engine *p_engine);

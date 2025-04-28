@@ -7,12 +7,13 @@ cmake_minimum_required(VERSION 3.5)
 # project name and version
 project(breakanoid VERSION 0.1.0 LANGUAGES C)
 
-# specify C++ standard
+# specify C standard
 set(CMAKE_C_STANDARD 99)
-# Without extensions False will set standard to gnu99 isntead of c99.
+# Without extensions False will set standard to gnu99 instead of c99.
 set(CMAKE_C_EXTENSIONS False)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
+# Set build flags
 set(CMAKE_C_FLAGS_DEBUG "-ggdb3 -O0")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-ggdb3 -O2")
@@ -64,7 +65,6 @@ find_package(Vulkan REQUIRED)
 
 # Add executable
 add_executable(breakanoid src/main.c src/vulkan/vulkan_engine.c src/SDL/SDL_backend.c src/util/deletion_queue.c src/game/game.c)
-
 
 # Disable unnecessary SDL3 features to reduce build size (dep_repos/SDL/CMakeLists.txt:250-274)
 set(SDL_AUDIO_DEFAULT      OFF CACHE BOOL "Disable SDL audio support")

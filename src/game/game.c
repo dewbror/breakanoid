@@ -9,7 +9,7 @@
 #include "SDL/SDL_backend.h"
 
 /**
- * 
+ *
  */
 bool game_run(struct vulkan_engine *p_engine, game_s *p_game) {
     // UNUSED
@@ -23,7 +23,7 @@ bool game_run(struct vulkan_engine *p_engine, game_s *p_game) {
 }
 
 /**
- * 
+ *
  */
 bool game_destroy(game_s *p_game) {
     // Flush deletion queue

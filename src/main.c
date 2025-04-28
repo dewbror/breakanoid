@@ -1,7 +1,7 @@
 /*
   Author: William Brorsson
   Date Created: April 17, 2025
-  
+
   main.c
 */
 
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
     // UNUSED
     (void)argc;
     (void)argv;
-    
+
     if(!_main())
         return EXIT_FAILURE;
     return EXIT_SUCCESS;
@@ -59,7 +59,8 @@ static bool _main() {
 #endif
     printf("Version %s+%s.%s\n\n", breakanoid_VERSION, GIT_BRANCH, GIT_COMMIT_HASH);
 
-    // Ive decided to not zero initialize the vulkan_engine, it takes time and i want to write my code such that no field is used befor it should be used.
+    // Ive decided to not zero initialize the vulkan_engine, it takes time and i want to write my code such that no
+    // field is used befor it should be used.
     vulkan_engine engine;
     // memset(&engine, 0, sizeof(vulkan_engine));
     bool success = vulkan_engine_init(&engine);

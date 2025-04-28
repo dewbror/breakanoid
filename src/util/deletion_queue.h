@@ -9,11 +9,12 @@
 #include "types.h"
 
 /**
- * A deletion node, holds a pointer to the resource which is to be deleted, a pointer to the function which will deletes the resource and a pointer to the previous node in the queue.
+ * A deletion node, holds a pointer to the resource which is to be deleted, a pointer to the function which will deletes
+ * the resource and a pointer to the previous node in the queue.
  */
 typedef struct deletion_node {
     void *p_resource;
-    void(*delete_func)(void *);
+    void (*delete_func)(void *);
     struct deletion_node *p_prev;
 } deletion_node;
 
@@ -27,25 +28,25 @@ typedef struct deletion_queue {
 
 /**
  * Allocate a new deletion_queue on the heap, the deletion queue is deleted when using deletion_queue_flush.
- * 
+ *
  * \return Pointer to newly allocated deletion_queue.
  */
 deletion_queue *deletion_queue_alloc(void);
 
 /**
  * Allocate a new deletion node on the heap and add it to the end of the deletion queue.
- * 
+ *
  * \param[in] p_queue       Pointer to the deletion queue the new node is added to.
  * \param[in] p_resource    Pointer to the resource to be deleted by the deletion function.
  * \param[in] deletion_func Pointer to the function that will delete the resource.
- * 
+ *
  * \returns True if successful, false if failed.
  */
 bool deletion_queue_queue(deletion_queue *p_queue, void *p_resource, void (*deletion_func)(void *));
 
 /**
  * Flush the deletion queue. Callbacks the deletion functions in each deletion queue from last to first.
- * 
+ *
  * \param[in] p_queue Pointer to the deletion_queue to flush.
  */
 void deletion_queue_flush(deletion_queue *p_queue);

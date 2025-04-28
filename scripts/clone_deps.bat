@@ -17,7 +17,7 @@ goto :eof
 @REM Start of script
 :MAIN
 
-set TARGET_DIR="..\dep_repos"
+set TARGET_DIR="dep_repos"
 
 if not exist %TARGET_DIR% (
     mkdir %TARGET_DIR%
