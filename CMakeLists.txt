@@ -62,6 +62,12 @@ set(stb_DIR                   "dep_repos/stb")
 # - Vulkan_INCLUDE_DIR
 # are also set, I think?
 find_package(Vulkan REQUIRED)
+if (Vulkan_FOUND)
+    message(STATUS "Found Vulkan: ${Vulkan_LIBRARIES}")
+    message(STATUS "Vulkan Include Directory: ${Vulkan_INCLUDE_DIRS}")
+else()
+    message(FATAL_ERROR "Could not find Vulkan!")
+endif()
 
 # Add executable
 add_executable(breakanoid src/main.c src/vulkan/vulkan_engine.c src/SDL/SDL_backend.c src/util/deletion_queue.c src/game/game.c)
@@ -114,11 +120,22 @@ target_compile_options(breakanoid PRIVATE
     -Wunused-macros 
     -Wduplicated-cond 
     -Wduplicated-branches
+    -Wvla
+    -Wvector-operation-performance
+    -Wsuggest-attribute=pure
+    -Wsuggest-attribute=const
+    -Wsuggest-attribute=noreturn
+    -Wmissing-noreturn
+    -Wsuggest-attribute=malloc
+    # -Wsuggest-attribute=returns_nonnull
+    -Wsuggest-attribute=format
+    -Wmissing-format-attribute
+    -Wsuggest-attribute=cold
 )
 
 # Add compile definitions
 if(WIN32)   
     add_compile_definitions(-DSYS_WINNT)
 elseif(UNIX)
-    add_compile_definitions(-DSYS_LINUX)
+    add_compile_definitions(SYS_LINUX)
 endif()
