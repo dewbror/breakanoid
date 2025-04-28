@@ -314,6 +314,7 @@ bool vulkan_engine_init(vulkan_engine *p_engine) {
         printf("failed to create SDL window surface. Error: %s\n", SDL_GetError());
         return false;
     }
+    // deletion_qeueu_queue(
 
     // Pick a physical device (GPU)
     if(!pick_physical_device(p_engine)) {
@@ -396,10 +397,10 @@ static bool create_instance(vulkan_engine *p_engine) {
     create_inst_info.sType                = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_inst_info.pApplicationInfo     = &app_info;
 
-    uint32_t count_required_extensions = 0;
-    const char **req_extensions        = get_required_extensions(&count_required_extensions);
+    uint32_t required_extensions_count = 0;
+    const char **req_extensions        = get_required_extensions(&required_extensions_count);
     // createInfo.enabledExtensionCount        = static_cast<uint32_t>(reqExtensions.size());
-    create_inst_info.enabledExtensionCount   = count_required_extensions;
+    create_inst_info.enabledExtensionCount   = required_extensions_count;
     create_inst_info.ppEnabledExtensionNames = req_extensions;
 
     VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};

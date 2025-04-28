@@ -40,6 +40,8 @@ bool init_SDL_backend(vulkan_engine *p_engine) {
 }
 
 static void SDL_Quit_wrapper(void *p_not_used) {
+    // UNUSED
+    (void)p_not_used;
     printf("Callback: SDL_Quit_wrapper\n");
     // Cleanup all initialized SDL subsystems
     SDL_Quit();
