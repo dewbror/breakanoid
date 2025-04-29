@@ -16,7 +16,7 @@ mkdir -p "$TARGET_DIR"
 # Function to clone repos
 clone_repo() {
     local repo_url=$1
-    git clone "$repo_url" "$TARGET_DIR/$(basename "$repo_url" .git)"
+    git clone --depth 1 "$repo_url" "$TARGET_DIR/$(basename "$repo_url" .git)"
 }
 
 # Iterate over the list of repos and clone them

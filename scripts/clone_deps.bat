@@ -10,7 +10,7 @@ goto :MAIN
     for /f "tokens=2 delims=/" %%a in (%repo_url%) do set temp=%%a
     @REM Remove everything after first .
     for /f "delims=." %%b in ("%temp%") do set repo_name=%%b
-    git clone %repo_url% %TARGET_DIR%\%repo_name%
+    git clone --depth 1 %repo_url% %TARGET_DIR%\%repo_name%
     endlocal
 goto :eof
 
