@@ -5,6 +5,7 @@
   main.c
 */
 
+// SDL_MAIN_IMPLEMENTATION
 #include "SDL3/SDL_main.h"
 
 // #ifdef __linux__
@@ -22,15 +23,15 @@
 #include "stb_image.h"
 
 // My headers
-#include "types.h"
-#include "version.h"
 #include "vulkan/vulkan_engine.h"
 #include "game/game.h"
+#include "version.h"
 
 // static bool my_main(void);
 
 // #ifdef SYS_WINNT
-// int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
+// int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
+// pCmdLine, int nCmdShow) {
 //     // UNUSED
 //     (void)hInstance;
 //     (void)hPrevInstance;
@@ -55,7 +56,7 @@
 // #endif
 // #endif
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     // UNUSED
     (void)argc;
     (void)argv;
@@ -64,8 +65,8 @@ int main(int argc, char **argv) {
 #endif
     printf("Version %s+%s.%s\n\n", breakanoid_VERSION, GIT_BRANCH, GIT_COMMIT_HASH);
 
-    // Ive decided to not zero initialize the vulkan_engine, it takes time and i want to write my code such that no
-    // field is used befor it should be used.
+    // Ive decided to not zero initialize the vulkan_engine, it takes time and i
+    // want to write my code such that no field is used befor it should be used.
     vulkan_engine engine;
     // memset(&engine, 0, sizeof(vulkan_engine));
     bool success = vulkan_engine_init(&engine);
@@ -80,4 +81,3 @@ int main(int argc, char **argv) {
     vulkan_engine_destroy(&engine);
     return success;
 }
-

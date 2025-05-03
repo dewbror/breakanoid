@@ -2,11 +2,14 @@
   deletion_queue.c
 */
 
-#include "types.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "util/deletion_queue.h"
 
-deletion_queue *deletion_queue_alloc() {
-    deletion_queue *p_queue = (deletion_queue *)malloc(sizeof(deletion_queue));
+deletion_queue* deletion_queue_alloc(void) {
+    deletion_queue* p_queue = (deletion_queue*)malloc(sizeof(deletion_queue));
     // TODO: Create my own malloc
     if(!p_queue) {
         printf("Failed to allocate deletion queue.");
@@ -20,8 +23,8 @@ deletion_queue *deletion_queue_alloc() {
     return p_queue;
 }
 
-bool deletion_queue_queue(deletion_queue *p_queue, void *p_resource, void (*delete_func)(void *)) {
-    deletion_node *p_new_node = (deletion_node *)malloc(sizeof(deletion_node));
+bool deletion_queue_queue(deletion_queue* p_queue, void* p_resource, void (*delete_func)(void*)) {
+    deletion_node* p_new_node = (deletion_node*)malloc(sizeof(deletion_node));
     // TODO: Create my own malloc that does allocation checking and zero init.
     if(!p_new_node) {
         printf("Failed to allocate deletion node\n");
@@ -41,14 +44,14 @@ bool deletion_queue_queue(deletion_queue *p_queue, void *p_resource, void (*dele
     return true;
 }
 
-void deletion_queue_flush(deletion_queue *p_queue) {
+void deletion_queue_flush(deletion_queue* p_queue) {
     if(!p_queue) {
         printf("Deletion queue is NULL\n");
         return;
     }
     printf("\nFlushing deletion queue\n");
     while(p_queue->p_last) {
-        deletion_node *p_node = p_queue->p_last;
+        deletion_node* p_node = p_queue->p_last;
         p_queue->p_last       = p_node->p_prev;
 
         // Call delete function on resource

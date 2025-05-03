@@ -20,3 +20,6 @@ src/version.h
 *.spv
 blender
 dep_repos
+.syntactic*
+.cache
+

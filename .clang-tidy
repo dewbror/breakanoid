@@ -1,14 +1,16 @@
 ---
 Checks:
-  '-*,
-   clang-diagnostic-*,
-   clang-analyzer-*,
-   bugprone-*,
-   -header-filter=.*,
-   -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
-   -clang-analyzer-security.insecureAPI.strcpy,
-   -clang-diagnostic-deprecated-declarations,
-   -bugprone-easily-swappable-parameters'
+    '-*,
+    cert-*,
+    clang-diagnostic-*,
+    clang-analyzer-*,
+    bugprone-*,
+    cppcoreguidelines-*'
+    # -header-filter=.*,
+    # -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+    # -clang-analyzer-security.insecureAPI.strcpy,
+    # -clang-diagnostic-deprecated-declarations,
+    # -bugprone-easily-swappable-parameters'
 WarningsAsErrors: ''
 HeaderFileExtensions: - h
 ImplementationFileExtensions: - c

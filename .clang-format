@@ -1,5 +1,5 @@
 ---
-# BasedOnStyle:  LLVM
+BasedOnStyle:  LLVM
 AlignAfterOpenBracket: Align
 AlignArrayOfStructures: None
 AlignConsecutiveAssignments:
@@ -135,7 +135,7 @@ IndentRequiresClause: true
 IndentWidth: 4
 IndentWrappedFunctionNames: false
 InsertBraces: false
-InsertNewlineAtEOF: false
+InsertNewlineAtEOF: true
 InsertTrailingCommas: None
 IntegerLiteralSeparator:
   Binary:           0
@@ -164,7 +164,7 @@ PenaltyBreakString: 1000
 PenaltyExcessCharacter: 1000000
 PenaltyIndentedWhitespace: 0
 PenaltyReturnTypeOnItsOwnLine: 60
-PointerAlignment: Right
+PointerAlignment: Left
 PPIndentWidth: -1
 QualifierAlignment: Leave
 ReferenceAlignment: Pointer

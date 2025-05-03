@@ -18,6 +18,8 @@ set(CMAKE_C_FLAGS_DEBUG "-ggdb3 -O0")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-ggdb3 -O2")
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Get the current Git branch
 execute_process(
     COMMAND git branch --show-current

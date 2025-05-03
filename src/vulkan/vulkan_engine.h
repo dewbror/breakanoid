@@ -6,15 +6,18 @@
 #define VULKAN_ENGINE_H_
 #pragma once
 
-#include "types.h"
-#include "vulkan/vulkan_types.h"
+#include <stdbool.h>
+
+#include <vulkan/vulkan_core.h>
+
+// Vulkan headers
 
 /**
  * A struct containing a pointer to an array of VkImages and the size of the array in number of VkImages.
  */
 typedef struct swapchain_images {
-    VkImage *p_images;
-    VkImageView *p_image_views;
+    VkImage* p_images;
+    VkImageView* p_image_views;
     uint32_t images_count;
 } swapchain_images;
 
@@ -22,8 +25,8 @@ typedef struct swapchain_images {
  * A struct containing all the necessary vulkan fields.
  */
 typedef struct vulkan_engine {
-    struct deletion_queue *p_main_delq;
-    struct SDL_Window *p_SDL_window;
+    struct deletion_queue* p_main_delq;
+    struct SDL_Window* p_SDL_window;
     VkExtent2D window_extent;
     VkInstance instance;
     VkDebugUtilsMessengerEXT debug_messenger;
@@ -47,7 +50,7 @@ typedef struct vulkan_engine {
  *
  * \return True if successful, false if failed.
  */
-bool vulkan_engine_init(vulkan_engine *p_engine);
+bool vulkan_engine_init(vulkan_engine* p_engine);
 
 /**
  * Used to delete a vulkan_engine. All deletion/destruction of objects is currently handled by the deletion queue. All
@@ -55,5 +58,5 @@ bool vulkan_engine_init(vulkan_engine *p_engine);
  *
  * \param[in] p_engine Pointer to the vulkan_engine.
  */
-void vulkan_engine_destroy(vulkan_engine *p_engine);
+void vulkan_engine_destroy(vulkan_engine* p_engine);
 #endif // VULKAN_ENGINE_H_
