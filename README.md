@@ -17,36 +17,37 @@ Dependencies
   - [CGLM](https://github.com/recp/cglm)
   - [stb_image](https://github.com/nothings/stb)
 
-How to build with cmake
+How to build (with cmake)
 -----------------------
 
 You must have the vulkan SDK installed.
 
-Run the clone_deps.sh/.bat script from the project root to clone dependencies into project directory. 
+Run the clone_deps.sh script from the project root to clone dependencies into project directory. 
 ```
+chmod +x ./script/clone_deps.sh
 ./scripts/clone_deps.sh 
 ```
 Build release ("-O3 -DNDEBUG")
 ```
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build_release
-cmake --build build_release 
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B ./build_release
+cmake --build ./build_release 
 ```
 Build debug ("-ggdb3 -O0")
 ```
-cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build_debug
-cmake --build build_debug
+cmake -DCMAKE_BUILD_TYPE=Debug -S . -B ./build_debug
+cmake --build ./build_debug
 ```
 Build release with debug info ("-ggdb3 -O2")
 ```
-cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -S . -B build_relwithdebinfo
-cmake --build build_relwithdebinfo
+cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -S . -B ./build_relwithdebinfo
+cmake --build ./build_relwithdebinfo
 ```
 Build with Ninja Multi-Config
 ```
-cmake -DCMAKE_DEFAULT_BUILD_TYPE=Debug -G "Ninja Multi-Config" -S . -B build
-cmake --build build --config Release
-cmake --build build --config Debug
-cmake --build build --config RelWithDebInfo
+cmake -DCMAKE_DEFAULT_BUILD_TYPE=Debug -G "Ninja Multi-Config" -S . -B ./build
+cmake --build ./build --config Release
+cmake --build ./build --config Debug
+cmake --build ./build --config RelWithDebInfo
 ```
 
 License
