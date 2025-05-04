@@ -8,16 +8,6 @@
 // SDL_MAIN_IMPLEMENTATION
 #include "SDL3/SDL_main.h"
 
-// #ifdef __linux__
-// // #include <X11/Xlib.h> // <-- probably not needed.
-// // https://registry.khronos.org/vulkan/specs/latest/man/html/WSIheaders.html
-// #include <unistd.h>
-// #else
-// #ifdef _WIN32
-// #include <windows.h> // <-- needs to be included before std headers?
-// #endif
-// #endif
-
 // STB headers. Move to vulkan_engine.c?
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -26,35 +16,6 @@
 #include "vulkan/vulkan_engine.h"
 #include "game/game.h"
 #include "version.h"
-
-// static bool my_main(void);
-
-// #ifdef SYS_WINNT
-// int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
-// pCmdLine, int nCmdShow) {
-//     // UNUSED
-//     (void)hInstance;
-//     (void)hPrevInstance;
-//     (void)pCmdLine;
-//     (void)nCmdShow;
-
-//     if(!my_main())
-//         return EXIT_FAILURE;
-//     return EXIT_SUCCESS;
-// }
-// #else
-// #ifdef SYS_LINUX
-// int main(int argc, char **argv) {
-//     // UNUSED
-//     (void)argc;
-//     (void)argv;
-
-//     if(!my_main())
-//         return EXIT_FAILURE;
-//     return EXIT_SUCCESS;
-// }
-// #endif
-// #endif
 
 int main(int argc, char** argv) {
     // UNUSED
