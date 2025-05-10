@@ -72,8 +72,6 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/cglm" OR NOT EXISTS "${CMAKE_CURRENT
             WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
         )
     else()
-        # Set the script as executable
-        # file(CHMOD "${CMAKE_SOURCE_DIR}/scripts/clone_dependencies.sh" OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
         execute_process(
             COMMAND "${CMAKE_SOURCE_DIR}/scripts/clone_dependencies.sh" SDL_OFF
             WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
@@ -88,7 +86,6 @@ set(stb_DIR  "${CMAKE_SOURCE_DIR}/external/stb")
 # Enable shared libraries globally
 set(BUILD_SHARED_LIBS ON)
 
-# Add SDL3 as a subdirectory
 set(SDL3_SHARED_ENABLED_BY_DEFAULT ON  CACHE BOOL "Enable SDL shared library")      # Ensure the shared library is enabled
 set(SDL3_STATIC_ENABLED_BY_DEFAULT OFF CACHE BOOL "Disable SDL static library")    # Disable the static library
 set(SDL3_TESTS                     OFF CACHE BOOL "Disable SDL test programs" FORCE)     # Disable SDL test programs
@@ -138,12 +135,13 @@ else()
             message(FATAL_ERROR "SDL could not be cloned!")
         endif()
     else()
-        message(STATUS "SDL found in external")
+        # message(STATUS "SDL found in external")
     endif()
     add_subdirectory(external/SDL)
     set(SDL3_LIBRARIES SDL3::SDL3-shared)
     set(SDL3_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/external/SDL/include)
 endif()
+# Necessary in order for SDL_test to not be built
 set_property(TARGET SDL3_test PROPERTY EXCLUDE_FROM_ALL TRUE)
 set_property(TARGET SDL3_test PROPERTY EXCLUDE_FROM_DEFAULT_BUILD TRUE)
 
