@@ -23,7 +23,7 @@ static void SDL_Quit_wrapper(void* p_not_used);
 bool init_SDL_backend(vulkan_engine* p_engine) {
     // Initialize SDL
     if(!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
-        printf("Failed to initialize SDL library. Error: %s", SDL_GetError());
+        printf("Failed to initialize SDL library. Error: %s\n", SDL_GetError());
         return false;
     }
     deletion_queue_queue(p_engine->p_main_delq, NULL, SDL_Quit_wrapper);

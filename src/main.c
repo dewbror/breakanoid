@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 #ifndef NDEBUG
     printf("THIS IS A DEBUG BUILD!\n");
 #endif
-    printf("Version %s+%s.%s\n\n", breakanoid_VERSION, GIT_BRANCH, GIT_COMMIT_HASH);
+    printf("Version %s+%s.%s\n", breakanoid_VERSION, GIT_BRANCH, GIT_COMMIT_HASH);
 
     // Ive decided to not zero initialize the vulkan_engine, it takes time and i
     // want to write my code such that no field is used befor it should be used.
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     if(success) {
         printf("Vulkan engine initialized\n");
         // Havent decided weather to zero initiate this struct or not.
-        game_s game;
+            game_s game;
         game_run(&engine, &game);
         game_destroy(&game);
     }

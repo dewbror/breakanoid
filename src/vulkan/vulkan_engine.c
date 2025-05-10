@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <vulkan/vulkan_core.h>
 
 #include "SDL3/SDL_error.h"
 #include "SDL3/SDL_vulkan.h"
@@ -16,11 +17,11 @@
 // Validation layers need to be enabled by specifying their name. All of the useful standard validation are bundled into
 // a layer included in the SDK that is known as VK_LAYER_KHRONOS_validation.
 static const uint32_t validation_layers_count = 1;
-static const char* validation_layers[1]       = {"VK_LAYER_KHRONOS_validation"};
+static const char* const validation_layers[1] = {"VK_LAYER_KHRONOS_validation"};
 
 // Swapchain support is not part of the Vulkan core. We need to enable the VK_KHR_swapchain device extension.
 static const uint32_t device_extensions_count = 1;
-static const char* device_extensions[1]       = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+static const char* const device_extensions[1] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 #ifdef NDEBUG
 static const bool enable_validation_layers = false;
@@ -75,7 +76,7 @@ static bool check_validation_layer_support(void);
  *
  * \return A pointer to a dynamically allocated array of strings (const char *).
  */
-static const char** get_required_extensions(uint32_t* p_required_extensions_count);
+static const char* const* get_required_extensions(uint32_t* p_required_extensions_count);
 
 /**
  * Populate the VkDebugUtilsMessengerCreateInfoEXT struct.
@@ -140,9 +141,16 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
 /**
  * DestroyDebugUtilsMessengerEXT wrapper for use in deletion queue.
  *
- * \param[in] p_vulkan_engine Pointer to vulkan engine.
+ * \param[in] p_engine Pointer to vulkan engine.
  */
 static void DestroyDebugUtilsMessengerEXT_wrapper(void* p_engine);
+
+/**
+ * vkDestroySurfaceKHR wrapper for use in deletion queue
+ *
+ * \param[in] p_engine Pointer to vulkan engine.
+ */
+static void vkDestroySurfaceKHR_wrapper(void* p_engine);
 
 /**
  * Pick a physical device.
@@ -217,6 +225,13 @@ static void free_wrapper(void* mem);
  * \return True if successful, false if failed.
  */
 static bool create_logical_device(vulkan_engine* p_engine);
+
+/**
+ * vkDestroyDevice wrapper for use in deletion queue
+ *
+ * \param[in] p_resource Pointer to the resource to be destroyed or a struct with a field that is to be destroyed.
+ */
+static void vkDestroyDevice_wrapper(void* p_resource);
 
 /**
  * Create a swapchain and getting the swapchain images.
@@ -319,7 +334,7 @@ bool vulkan_engine_init(vulkan_engine* p_engine) {
         printf("failed to create SDL window surface. Error: %s\n", SDL_GetError());
         return false;
     }
-    // deletion_qeueu_queue(p_engine,
+    deletion_queue_queue(p_engine->p_main_delq, (void*)p_engine, vkDestroySurfaceKHR_wrapper);
 
     // Pick a physical device (GPU)
     if(!pick_physical_device(p_engine)) {
@@ -332,6 +347,7 @@ bool vulkan_engine_init(vulkan_engine* p_engine) {
         printf("Failed to create logical device\n");
         return false;
     }
+    deletion_queue_queue(p_engine->p_main_delq, (void*)p_engine, vkDestroyDevice_wrapper);
 
     // Create swapchain
     if(!create_swapchain(p_engine)) {
@@ -373,20 +389,19 @@ static bool create_instance(vulkan_engine* p_engine) {
 
     // Retrieve a list of supported extensions before creating an instance.
     // Request just the number of extensions.
-    uint32_t extension_count;
+    uint32_t extension_count = 0;
     vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &extension_count, VK_NULL_HANDLE);
     VkExtensionProperties* extensions = (VkExtensionProperties*)malloc(extension_count * sizeof(VkExtensionProperties));
 
     // Query the extension details.
     vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &extension_count, extensions);
 
-    printf("\nAvailable extensions:\n");
+    printf("Available extensions:\n");
     for(uint32_t i = 0; i < extension_count; ++i) {
         printf("%s\n", extensions[i].extensionName);
     }
-    printf("\n");
     // Free extensions array
-    free((void*)extensions);
+    free(extensions);
 
     VkApplicationInfo app_info = {0};
     app_info.sType             = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -402,7 +417,7 @@ static bool create_instance(vulkan_engine* p_engine) {
     create_inst_info.pApplicationInfo     = &app_info;
 
     uint32_t required_extensions_count = 0;
-    const char** req_extensions        = get_required_extensions(&required_extensions_count);
+    const char* const* req_extensions  = get_required_extensions(&required_extensions_count);
     // createInfo.enabledExtensionCount        = static_cast<uint32_t>(reqExtensions.size());
     create_inst_info.enabledExtensionCount   = required_extensions_count;
     create_inst_info.ppEnabledExtensionNames = req_extensions;
@@ -438,13 +453,13 @@ static bool create_instance(vulkan_engine* p_engine) {
 
     // Need to handle this better, this is dynamically allocated in getRequiredExtensions and must be freed after
     // instance creation.
-    SDL_free((void*)req_extensions);
+    SDL_free((void*)req_extensions); // NOLINT
 
     return true;
 }
 
 static bool check_validation_layer_support(void) {
-    uint32_t available_layers_count;
+    uint32_t available_layers_count = 0;
     // Query number of available layers.
     vkEnumerateInstanceLayerProperties(&available_layers_count, VK_NULL_HANDLE);
 
@@ -453,7 +468,7 @@ static bool check_validation_layer_support(void) {
         (VkLayerProperties*)malloc(available_layers_count * sizeof(VkLayerProperties));
     vkEnumerateInstanceLayerProperties(&available_layers_count, available_layers);
 
-    printf("\nAvailable layers:\n");
+    printf("Available layers:\n");
     for(uint32_t i = 0; i < available_layers_count; ++i)
         printf("%s\n", available_layers[i].layerName);
 
@@ -475,26 +490,45 @@ static bool check_validation_layer_support(void) {
     return true;
 }
 
-static const char** get_required_extensions(uint32_t* p_required_extensions_count) {
+static const char* const* get_required_extensions(uint32_t* p_required_extensions_count) {
     // Specify the desired global extensions.
-    uint32_t count_instance_extensions     = 0;
-    uint32_t count_extensions              = 0;
+    uint32_t count_instance_extensions = 0;
+
+    // https://wiki.libsdl.org/SDL3/SDL_Vulkan_GetInstanceExtensions
+    // Query the instance extensions from SDL
     const char* const* instance_extensions = SDL_Vulkan_GetInstanceExtensions(&count_instance_extensions);
-
-    count_extensions = count_instance_extensions;
-    if(enable_validation_layers)
-        count_extensions += 1;
-
-    // This malloc needs to be freed manually outside this function!!!
-    const char** extensions = (const char**)SDL_malloc(count_extensions * sizeof(const char*));
-    SDL_memcpy((void*)(&extensions[0]), (void*)instance_extensions, count_instance_extensions * sizeof(const char*));
-
-    if(enable_validation_layers) {
-        extensions[count_extensions - 1] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+    if(instance_extensions == NULL) {
+        // Handle failure to query instance extensions
+        *p_required_extensions_count = 0;
+        return NULL;
     }
+
+    // Calculate the total number of required extensions
+    uint32_t count_extensions = count_instance_extensions;
+    if(enable_validation_layers)
+        ++count_extensions; // Include validation layer extension
+
+    // Allocate memory for the extensions array
+    char** extensions = (char**)SDL_malloc(count_extensions * sizeof(char*));
+    if(extensions == NULL) {
+        // Handle memory allocation failure
+        *p_required_extensions_count = 0;
+        return NULL;
+    }
+
+    // Copy instance extensions into the allocated array
+    memcpy((void*)extensions, (const void*)instance_extensions, count_instance_extensions * sizeof(char*));
+
+    // Add validation layer extension if enabled
+    if(enable_validation_layers) {
+        extensions[count_extensions - 1] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME; // NOLINT
+    }
+
     // Set the extenion count
     *p_required_extensions_count = count_extensions;
-    return extensions;
+
+    // Return the extensions array as immutable (const char* const*)
+    return (const char* const*)extensions;
 }
 
 static void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* p_create_info) {
@@ -611,10 +645,14 @@ static void DestroyDebugUtilsMessengerEXT_wrapper(void* p_vulkan_engine) {
                                   ((vulkan_engine*)p_vulkan_engine)->debug_messenger, VK_NULL_HANDLE);
 }
 
-// static void vkDestroySurfaceKHR_wrapper(void *p_engine) {
+static void vkDestroySurfaceKHR_wrapper(void* p_resource) {
+    printf("Callback: vkDestroySurfaceKHR_wrapper\n");
+    vulkan_engine* p_engine = (vulkan_engine*)p_resource;
+    vkDestroySurfaceKHR(p_engine->instance, p_engine->surface, VK_NULL_HANDLE);
+}
 
 static bool pick_physical_device(vulkan_engine* p_engine) {
-    uint32_t device_count;
+    uint32_t device_count = 0;
     // Get number of devices with Vulkan support
     vkEnumeratePhysicalDevices(p_engine->instance, &device_count, VK_NULL_HANDLE);
     // If no deives with Vulkan support, runtime error
@@ -702,7 +740,7 @@ static bool find_queue_families(vulkan_engine* p_engine, VkPhysicalDevice device
     // findQueueFamilies that looks for all the queue families we need.
     // queue_family_indices q_fam_indices;
 
-    uint32_t queue_family_count;
+    uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, VK_NULL_HANDLE);
     VkQueueFamilyProperties* queue_families =
         (VkQueueFamilyProperties*)malloc(queue_family_count * sizeof(VkQueueFamilyProperties));
@@ -736,7 +774,7 @@ static bool find_queue_families(vulkan_engine* p_engine, VkPhysicalDevice device
 }
 
 static bool check_device_extension_support(VkPhysicalDevice device) {
-    uint32_t extension_count;
+    uint32_t extension_count = 0;
     vkEnumerateDeviceExtensionProperties(device, VK_NULL_HANDLE, &extension_count, VK_NULL_HANDLE);
 
     VkExtensionProperties* available_extensions =
@@ -771,7 +809,7 @@ static bool query_swapchain_support(vulkan_engine* p_engine, VkPhysicalDevice de
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, p_engine->surface, &p_details->capabilities);
 
     // Query supported surface formats.
-    uint32_t formats_count;
+    uint32_t formats_count = 0;
     vkGetPhysicalDeviceSurfaceFormatsKHR(device, p_engine->surface, &formats_count, VK_NULL_HANDLE);
     if(formats_count != 0) {
         p_details->formats = (VkSurfaceFormatKHR*)malloc(formats_count * sizeof(VkSurfaceFormatKHR));
@@ -783,7 +821,7 @@ static bool query_swapchain_support(vulkan_engine* p_engine, VkPhysicalDevice de
     }
 
     // Query supported presentation modes.
-    uint32_t present_modes_count;
+    uint32_t present_modes_count = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(device, p_engine->surface, &present_modes_count, VK_NULL_HANDLE);
     if(present_modes_count != 0) {
         p_details->present_modes = (VkPresentModeKHR*)malloc(present_modes_count * sizeof(VkPresentModeKHR));
@@ -869,6 +907,12 @@ static bool create_logical_device(vulkan_engine* p_engine) {
     free(unique_q_fams);
     free(q_create_infos);
     return true;
+}
+
+static void vkDestroyDevice_wrapper(void* p_resource) {
+    printf("Callback: vkDestroyDevice_wrapper\n");
+    vulkan_engine* p_engine = (vulkan_engine*)p_resource;
+    vkDestroyDevice(p_engine->device, VK_NULL_HANDLE);
 }
 
 static bool create_swapchain(vulkan_engine* p_engine) {
@@ -1047,7 +1091,7 @@ static VkExtent2D choose_swapchain_extent(vulkan_engine* p_engine, VkSurfaceCapa
     if(capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;
     } else {
-        int width, height;
+        int width = 0, height = 0;
         // SDL_GetWindowSize(p_engine->p_SDL_window, &width, &height);
         if(!SDL_GetWindowSizeInPixels(p_engine->p_SDL_window, &width, &height)) {
             printf("Faile to get the window size: %s", SDL_GetError());

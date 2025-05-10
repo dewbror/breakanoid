@@ -12,7 +12,7 @@ deletion_queue* deletion_queue_alloc(void) {
     deletion_queue* p_queue = (deletion_queue*)malloc(sizeof(deletion_queue));
     // TODO: Create my own malloc
     if(!p_queue) {
-        printf("Failed to allocate deletion queue.");
+        printf("Failed to allocate deletion queue.\n");
         return NULL;
     }
     // Memset not necessary since we are setting the field members directly after allocation
@@ -49,7 +49,7 @@ void deletion_queue_flush(deletion_queue* p_queue) {
         printf("Deletion queue is NULL\n");
         return;
     }
-    printf("\nFlushing deletion queue\n");
+    printf("Flushing deletion queue\n");
     while(p_queue->p_last) {
         deletion_node* p_node = p_queue->p_last;
         p_queue->p_last       = p_node->p_prev;
