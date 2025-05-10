@@ -19,7 +19,7 @@ deps
 src/version.h
 *.spv
 blender
-dep_repos
+external
 .syntactic*
 .cache
 

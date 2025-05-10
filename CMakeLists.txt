@@ -9,6 +9,7 @@ project(breakanoid VERSION 0.1.0 LANGUAGES C)
 
 # specify C standard
 set(CMAKE_C_STANDARD 99)
+
 # Without extensions False will set standard to gnu99 instead of c99.
 set(CMAKE_C_EXTENSIONS False)
 set(CMAKE_C_STANDARD_REQUIRED True)
@@ -45,7 +46,16 @@ execute_process(
 )
 
 # Configure version header
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h)
+configure_file(${CMAKE_SOURCE_DIR}/src/version.h.in ${CMAKE_SOURCE_DIR}/src/version.h)
+
+# Find Vulkan
+find_package(Vulkan REQUIRED)
+if(Vulkan_FOUND)
+    # message(STATUS "Found Vulkan: ${Vulkan_LIBRARIES}")
+    message(STATUS "Vulkan Include Directory: ${Vulkan_INCLUDE_DIRS}")
+else()
+    message(FATAL_ERROR "Could not find Vulkan!")
+endif()
 
 # FROM: https://github.com/libsdl-org/SDL/blob/main/docs/INTRO-cmake.md
 # set the output directory for built objects.
@@ -53,26 +63,36 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version.h.in ${CMAKE_CURRENT_SOUR
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
-# SET PATH TO DEPENDENCY DIRECTORIES HERE
-set(SDL3_DIR                  "dep_repos/SDL")
-set(cglm_DIR                  "dep_repos/cglm")
-set(stb_DIR                   "dep_repos/stb")
-
-# This requires the packages be found and avaiable
-# In the case of Vulkan at least, the varaibles
-# - Vulkan_LIBRARIES
-# - Vulkan_INCLUDE_DIR
-# are also set, I think?
-find_package(Vulkan REQUIRED)
-if (Vulkan_FOUND)
-    message(STATUS "Found Vulkan: ${Vulkan_LIBRARIES}")
-    message(STATUS "Vulkan Include Directory: ${Vulkan_INCLUDE_DIRS}")
-else()
-    message(FATAL_ERROR "Could not find Vulkan!")
+# Check if cglm and stb exist, if either one doesnt then run the dependency clone script
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/cglm" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/stb")
+    message(STATUS "Running clone script...")
+    if(WIN32)
+        execute_process(
+            COMMAND "${CMAKE_SOURCE_DIR}/scripts/clone_dependencies.bat" SDL_OFF
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+    else()
+        # Set the script as executable
+        # file(CHMOD "${CMAKE_SOURCE_DIR}/scripts/clone_dependencies.sh" OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE)
+        execute_process(
+            COMMAND "${CMAKE_SOURCE_DIR}/scripts/clone_dependencies.sh" SDL_OFF
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+    endif()
 endif()
 
-# Add executable
-add_executable(breakanoid src/main.c src/vulkan/vulkan_engine.c src/SDL/SDL_backend.c src/util/deletion_queue.c src/game/game.c)
+# Set cglm and stb directories
+set(cglm_DIR "${CMAKE_SOURCE_DIR}/external/cglm")
+set(stb_DIR  "${CMAKE_SOURCE_DIR}/external/stb")
+
+# Enable shared libraries globally
+set(BUILD_SHARED_LIBS ON)
+
+# Add SDL3 as a subdirectory
+set(SDL3_SHARED_ENABLED_BY_DEFAULT ON  CACHE BOOL "Enable SDL shared library")      # Ensure the shared library is enabled
+set(SDL3_STATIC_ENABLED_BY_DEFAULT OFF CACHE BOOL "Disable SDL static library")    # Disable the static library
+set(SDL3_TESTS                     OFF CACHE BOOL "Disable SDL test programs" FORCE)     # Disable SDL test programs
+set(SDL3_INSTALL                   OFF CACHE BOOL "Disable SDL instalation rules") # Disable SDL installation rules 
 
 # Disable unnecessary SDL3 features to reduce build size (dep_repos/SDL/CMakeLists.txt:250-274)
 set(SDL_AUDIO_DEFAULT      OFF CACHE BOOL "Disable SDL audio support")
@@ -87,18 +107,60 @@ set(SDL_POWER_DEFAULT      OFF CACHE BOOL "Disable SDL power support")
 set(SDL_SENSOR_DEFAULT     OFF CACHE BOOL "Disable SDL sensor support")
 set(SDL_DIALOG_DEFAULT     OFF CACHE BOOL "Disable SDL locale support")
 
-# Add dependencies
-add_subdirectory(${SDL3_DIR} EXCLUDE_FROM_ALL ${CMAKE_BINARY_DIR}/SDL3)
-add_subdirectory(${cglm_DIR} ${CMAKE_BINARY_DIR}/cglm EXCLUDE_FROM_ALL)
+# Add an option to toggle between system-installed and embedded SDL
+option(USE_SYSTEM_SDL "Use system-installed SDL instead of building SDL as a subdirectory" OFF)
 
+# Configure SDL
+if(USE_SYSTEM_SDL)
+    find_package(SDL3 QUIET SDL3-shared)
+    if(NOT SDL3_FOUND)
+        message(FATAL_ERROR "System-wide SDL3 installation not found. Please install SDL3 or disable USE_SYSTEM_SDL.")
+    endif()
+    set(SDL3_LIBRARIES SDL3::SDL3-shared)
+    set(SDL3_INCLUDE_DIR ${SDL3_INCLUDE_DIRS})
+else()
+    # Check if external/SDL exists
+    if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/SDL")
+        # message(STATUS "SDL not found in external. Running clone script...")
+        if(WIN32)
+            execute_process(
+                COMMAND "${CMAKE_SOURCE_DIR}/scripts/clone_dependencies.bat" SDL_ONLY
+                WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            )
+        else()
+            execute_process(
+                COMMAND "${CMAKE_SOURCE_DIR}/scripts/clone_dependencies.sh" SDL_ONLY
+                WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            )
+        endif()
+        # Re-check if the clone was successful
+        if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/SDL")
+            message(FATAL_ERROR "SDL could not be cloned!")
+        endif()
+    else()
+        message(STATUS "SDL found in external")
+    endif()
+    add_subdirectory(external/SDL)
+    set(SDL3_LIBRARIES SDL3::SDL3-shared)
+    set(SDL3_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/external/SDL/include)
+endif()
+set_property(TARGET SDL3_test PROPERTY EXCLUDE_FROM_ALL TRUE)
+set_property(TARGET SDL3_test PROPERTY EXCLUDE_FROM_DEFAULT_BUILD TRUE)
+
+# Add executables
+add_executable(breakanoid src/main.c src/vulkan/vulkan_engine.c src/SDL/SDL_backend.c src/util/deletion_queue.c src/game/game.c)
+
+# Add external include directories
 target_include_directories(breakanoid SYSTEM PRIVATE ${Vulkan_INCLUDE_DIR})
+target_include_directories(breakanoid SYSTEM PRIVATE ${SDL3_INCLUDE_DIR})
 target_include_directories(breakanoid SYSTEM PRIVATE ${cglm_DIR}/include)
 target_include_directories(breakanoid SYSTEM PRIVATE ${stb_DIR})
 
 # Include directory
-target_include_directories(breakanoid PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/)
+target_include_directories(breakanoid PRIVATE ${CMAKE_SOURCE_DIR}/src/)
+
 # Link libraries
-target_link_libraries(breakanoid PRIVATE m SDL3::SDL3 ${Vulkan_LIBRARIES})
+target_link_libraries(breakanoid PRIVATE m SDL3::SDL3-shared ${Vulkan_LIBRARIES})
 
 # Set target compile options
 target_compile_options(breakanoid PRIVATE 
@@ -135,9 +197,3 @@ target_compile_options(breakanoid PRIVATE
     -Wsuggest-attribute=cold
 )
 
-# Add compile definitions
-if(WIN32)   
-    add_compile_definitions(-DSYS_WINNT)
-elseif(UNIX)
-    add_compile_definitions(SYS_LINUX)
-endif()
