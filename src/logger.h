@@ -40,7 +40,7 @@ void logger__msg(log_level level, const char* file, int line, const char* fmt, .
 // Default for NDEBUG is LOG_WARN
 #define LOG_LEVEL 2
 #else
-// Default in debug mode is LOG_TRACE
+// Default in debug mode is LOG_DEBUG
 #define LOG_LEVEL 3
 #endif
 #endif

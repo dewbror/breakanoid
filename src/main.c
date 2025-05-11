@@ -22,8 +22,8 @@ int main(int argc, char** argv) {
     // UNUSED
     (void)argc;
     (void)argv;
-    
-    LOG_TRACE("Entering main()");
+
+    LOG_DEBUG("Entering main()");
 
     // Open log file
     open_log_file();

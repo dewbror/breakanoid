@@ -340,6 +340,7 @@ bool vulkan_engine_init(vulkan_engine* p_engine) {
     // Create SDL window surface
     if(!SDL_Vulkan_CreateSurface(p_engine->p_SDL_window, p_engine->instance, VK_NULL_HANDLE, &p_engine->surface)) {
         LOG_ERROR("Failed to create vulkan rendering surface: %s", SDL_GetError());
+        LOG_ERROR("Failed to initialize vulkan engine");
         return false;
     }
     LOG_INFO("Vulkan rendering surface created");
@@ -362,7 +363,7 @@ bool vulkan_engine_init(vulkan_engine* p_engine) {
         LOG_ERROR("Failed to initialize vulkan engine");
         return false;
     }
-    
+
     // Create image views
     // if(!create_image_views(p_engine)) {
     //     printf("Failed to create image views\n");
@@ -387,6 +388,7 @@ bool vulkan_engine_init(vulkan_engine* p_engine) {
 void vulkan_engine_destroy(vulkan_engine* p_engine) {
     // Flush deletion queue
     deletion_queue_flush(p_engine->p_main_delq);
+    LOG_INFO("Vulkan engine destroyed");
 }
 
 static bool create_instance(vulkan_engine* p_engine) {
@@ -406,9 +408,9 @@ static bool create_instance(vulkan_engine* p_engine) {
     // Query the extension details.
     vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &extension_count, extensions);
 
-    LOG_TRACE("Available extensions:");
+    LOG_DEBUG("Available extensions:");
     for(uint32_t i = 0; i < extension_count; ++i) {
-        LOG_TRACE("%s", extensions[i].extensionName);
+        LOG_DEBUG("%s", extensions[i].extensionName);
     }
     // Free extensions array
     free(extensions);
@@ -439,7 +441,7 @@ static bool create_instance(vulkan_engine* p_engine) {
         create_inst_info.enabledLayerCount   = validation_layers_count;
         create_inst_info.ppEnabledLayerNames = validation_layers;
         for(uint32_t i = 0; i < validation_layers_count; ++i)
-            LOG_TRACE("validation_layers: i = %d %s", i, validation_layers[i]);
+            LOG_DEBUG("validation_layers: i = %d %s", i, validation_layers[i]);
 
         populate_debug_messenger_create_info(&debug_create_info);
         create_inst_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
@@ -479,9 +481,9 @@ static bool check_validation_layer_support(void) {
         (VkLayerProperties*)malloc(available_layers_count * sizeof(VkLayerProperties));
     vkEnumerateInstanceLayerProperties(&available_layers_count, available_layers);
 
-    LOG_TRACE("Available layers:");
+    LOG_DEBUG("Available layers:");
     for(uint32_t i = 0; i < available_layers_count; ++i)
-        LOG_TRACE("%s", available_layers[i].layerName);
+        LOG_DEBUG("%s", available_layers[i].layerName);
 
     // Check if all of the layers in validationLayers exist in the availableLayers list.
     for(uint32_t i = 0; i < validation_layers_count; ++i) {
@@ -598,7 +600,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBit
     } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
         level = LOG_INFO;
     } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
-        level = LOG_TRACE;
+        level = LOG_DEBUG;
     } else {
         // This should never occur because the above message severities are the only ones avaiable, but i have added
         // this final else just in case.
@@ -610,7 +612,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBit
 }
 
 static void vkDestroyInstance_wrapper(void* p_vulkan_instance) {
-    LOG_TRACE("Callback: vkDestroyInstance_wrapper");
+    LOG_DEBUG("Callback: vkDestroyInstance_wrapper");
     vkDestroyInstance(*((VkInstance*)p_vulkan_instance), VK_NULL_HANDLE);
 }
 
@@ -676,13 +678,13 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
 }
 
 static void DestroyDebugUtilsMessengerEXT_wrapper(void* p_vulkan_engine) {
-    LOG_TRACE("Callback: DestroyDebugUtilsMessengerEXT_wrapper");
+    LOG_DEBUG("Callback: DestroyDebugUtilsMessengerEXT_wrapper");
     DestroyDebugUtilsMessengerEXT(((vulkan_engine*)p_vulkan_engine)->instance,
                                   ((vulkan_engine*)p_vulkan_engine)->debug_messenger, VK_NULL_HANDLE);
 }
 
 static void vkDestroySurfaceKHR_wrapper(void* p_resource) {
-    LOG_TRACE("Callback: vkDestroySurfaceKHR_wrapper");
+    LOG_DEBUG("Callback: vkDestroySurfaceKHR_wrapper");
     vulkan_engine* p_engine = (vulkan_engine*)p_resource;
     vkDestroySurfaceKHR(p_engine->instance, p_engine->surface, VK_NULL_HANDLE);
 }
@@ -704,7 +706,7 @@ static bool pick_physical_device(vulkan_engine* p_engine) {
     vkEnumeratePhysicalDevices(p_engine->instance, &device_count, devices);
 
     // Check for suitable device in devices
-    LOG_TRACE("Looking for suitable devices:");
+    LOG_DEBUG("Looking for suitable devices:");
     for(uint32_t i = 0; i < device_count; ++i) {
         if(is_device_suitable(p_engine, devices[i])) {
             p_engine->physical_device = devices[i];
@@ -722,7 +724,7 @@ static bool pick_physical_device(vulkan_engine* p_engine) {
         LOG_ERROR("Failed to find suitable GPU");
         return false;
     }
-    LOG_TRACE("MSAA samples: %d", p_engine->msaa_samples);
+    LOG_DEBUG("MSAA samples: %d", p_engine->msaa_samples);
     LOG_INFO("Physical device picked: %s", "Temp, replace with physical device name and ID");
     return true;
 }
@@ -737,8 +739,8 @@ static bool is_device_suitable(vulkan_engine* p_engine, VkPhysicalDevice device)
     VkPhysicalDeviceFeatures device_features;
     vkGetPhysicalDeviceFeatures(device, &device_features);
 
-    LOG_TRACE("Device name: %s", device_properties.deviceName);
-    LOG_TRACE("Device supported Vulkan version: %u.%u.%u.%u", VK_API_VERSION_VARIANT(device_properties.apiVersion),
+    LOG_DEBUG("Device name: %s", device_properties.deviceName);
+    LOG_DEBUG("Device supported Vulkan version: %u.%u.%u.%u", VK_API_VERSION_VARIANT(device_properties.apiVersion),
               VK_API_VERSION_MAJOR(device_properties.apiVersion), VK_API_VERSION_MINOR(device_properties.apiVersion),
               VK_API_VERSION_PATCH(device_properties.apiVersion));
 
@@ -890,7 +892,7 @@ static bool query_swapchain_support(vulkan_engine* p_engine, VkPhysicalDevice de
 }
 
 static void free_wrapper(void* p_mem) {
-    LOG_TRACE("Callback: free_wrapper");
+    LOG_DEBUG("Callback: free_wrapper");
     free(p_mem);
 }
 
@@ -967,7 +969,7 @@ static bool create_logical_device(vulkan_engine* p_engine) {
 }
 
 static void vkDestroyDevice_wrapper(void* p_resource) {
-    LOG_TRACE("Callback: vkDestroyDevice_wrapper");
+    LOG_DEBUG("Callback: vkDestroyDevice_wrapper");
     vulkan_engine* p_engine = (vulkan_engine*)p_resource;
     vkDestroyDevice(p_engine->device, VK_NULL_HANDLE);
 }
@@ -1090,7 +1092,7 @@ static bool create_swapchain(vulkan_engine* p_engine) {
 }
 
 static void vkDestroySwapchainKHR_wrapper(void* p_engine) {
-    LOG_TRACE("Callback: vkDestroySwapchainKHR_wrapper");
+    LOG_DEBUG("Callback: vkDestroySwapchainKHR_wrapper");
     vkDestroySwapchainKHR(((vulkan_engine*)p_engine)->device, ((vulkan_engine*)p_engine)->swapchain, VK_NULL_HANDLE);
 }
 

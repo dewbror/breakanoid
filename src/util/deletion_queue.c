@@ -22,7 +22,7 @@ deletion_queue* deletion_queue_alloc(void) {
     p_queue->p_first = NULL;
     p_queue->p_last  = NULL;
 
-    LOG_TRACE("Deletion queue allocated successfully");
+    LOG_DEBUG("Deletion queue allocated successfully");
     return p_queue;
 }
 
@@ -49,7 +49,7 @@ bool deletion_queue_queue(deletion_queue* p_queue, void* p_resource, void (*dele
     }
     p_queue->p_last = p_new_node;
 
-    LOG_TRACE("Deletion node allocated successfully");
+    LOG_DEBUG("Deletion node allocated successfully");
     return true;
 }
 
@@ -59,7 +59,7 @@ void deletion_queue_flush(deletion_queue* p_queue) {
         LOG_WARN("Deletion queue is NULL");
         return;
     }
-    LOG_TRACE("Flushing deletion queue");
+    LOG_DEBUG("Flushing deletion queue");
     while(p_queue->p_last) {
         deletion_node* p_node = p_queue->p_last;
         p_queue->p_last       = p_node->p_prev;
@@ -73,5 +73,5 @@ void deletion_queue_flush(deletion_queue* p_queue) {
     }
     // Free the deletion queue itself
     free(p_queue);
-    LOG_TRACE("Deletion queue flushed");
+    LOG_DEBUG("Deletion queue flushed");
 }

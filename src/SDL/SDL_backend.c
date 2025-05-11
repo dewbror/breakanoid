@@ -51,13 +51,13 @@ static void SDL_Quit_wrapper(void* p_not_used) {
     // UNUSED
     (void)p_not_used;
 
-    LOG_TRACE("Callback: SDL_Quit_wrapper");
+    LOG_DEBUG("Callback: SDL_Quit_wrapper");
     // Cleanup all initialized SDL subsystems
     SDL_Quit();
 }
 
 static void SDL_DestroyWindow_wrapper(void* p_SDL_window) {
-    LOG_TRACE("Callback: SDL_DestroyWindow_wrapper");
+    LOG_DEBUG("Callback: SDL_DestroyWindow_wrapper");
     // Destroy SDL window
     SDL_DestroyWindow((SDL_Window*)p_SDL_window);
 }
