@@ -16,15 +16,17 @@
 #include "vulkan/vulkan_engine.h"
 #include "game/game.h"
 #include "version.h"
+#include "logger.h"
 
 int main(int argc, char** argv) {
     // UNUSED
     (void)argc;
     (void)argv;
+    LOG_TRACE("Entering main()");
 #ifndef NDEBUG
-    printf("THIS IS A DEBUG BUILD!\n");
+    LOG_INFO("This is a debug build");
 #endif
-    printf("Version %s+%s.%s\n", breakanoid_VERSION, GIT_BRANCH, GIT_COMMIT_HASH);
+    LOG_INFO("Build version: %s+%s.%s", breakanoid_VERSION, GIT_BRANCH, GIT_COMMIT_HASH);
 
     // Ive decided to not zero initialize the vulkan_engine, it takes time and i
     // want to write my code such that no field is used befor it should be used.
@@ -32,9 +34,8 @@ int main(int argc, char** argv) {
     // memset(&engine, 0, sizeof(vulkan_engine));
     bool success = vulkan_engine_init(&engine);
     if(success) {
-        printf("Vulkan engine initialized\n");
         // Havent decided weather to zero initiate this struct or not.
-            game_s game;
+        game_s game;
         game_run(&engine, &game);
         game_destroy(&game);
     }

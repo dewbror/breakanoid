@@ -6,6 +6,7 @@
 
 #include "SDL3/SDL_init.h"
 
+#include "logger.h"
 #include "vulkan/vulkan_engine.h"
 #include "SDL/SDL_backend.h"
 #include "util/deletion_queue.h"
@@ -23,9 +24,12 @@ static void SDL_Quit_wrapper(void* p_not_used);
 bool init_SDL_backend(vulkan_engine* p_engine) {
     // Initialize SDL
     if(!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
-        printf("Failed to initialize SDL library. Error: %s\n", SDL_GetError());
+        // Handle SDL_InitSubSystem error
+        LOG_ERROR("Failed to initialize SDL sub systems: %s", SDL_GetError());
         return false;
     }
+    LOG_INFO("SDL sub system initialized");
+    // Add SDL_Quit() to the deletion queue
     deletion_queue_queue(p_engine->p_main_delq, NULL, SDL_Quit_wrapper);
 
     // Create SDL window
@@ -34,24 +38,26 @@ bool init_SDL_backend(vulkan_engine* p_engine) {
     p_engine->p_SDL_window =
         SDL_CreateWindow("temp", (int)p_engine->window_extent.width, (int)p_engine->window_extent.height, windowFlags);
     if(!p_engine->p_SDL_window) {
-        printf("Failed to create SDL window. Error: %s", SDL_GetError());
+        // Handle SDL_CreateWindow error
+        LOG_ERROR("Failed to create SDL window: %s", SDL_GetError());
         return false;
     }
     deletion_queue_queue(p_engine->p_main_delq, p_engine->p_SDL_window, SDL_DestroyWindow_wrapper);
-    printf("SDL initialized\n");
+    LOG_INFO("SDL window created");
     return true;
 }
 
 static void SDL_Quit_wrapper(void* p_not_used) {
     // UNUSED
     (void)p_not_used;
-    printf("Callback: SDL_Quit_wrapper\n");
+
+    LOG_TRACE("Callback: SDL_Quit_wrapper");
     // Cleanup all initialized SDL subsystems
     SDL_Quit();
 }
 
 static void SDL_DestroyWindow_wrapper(void* p_SDL_window) {
-    printf("Callback: SDL_DestroyWindow_wrapper\n");
+    LOG_TRACE("Callback: SDL_DestroyWindow_wrapper");
     // Destroy SDL window
     SDL_DestroyWindow((SDL_Window*)p_SDL_window);
 }

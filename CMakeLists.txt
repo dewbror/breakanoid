@@ -146,7 +146,7 @@ set_property(TARGET SDL3_test PROPERTY EXCLUDE_FROM_ALL TRUE)
 set_property(TARGET SDL3_test PROPERTY EXCLUDE_FROM_DEFAULT_BUILD TRUE)
 
 # Add executables
-add_executable(breakanoid src/main.c src/vulkan/vulkan_engine.c src/SDL/SDL_backend.c src/util/deletion_queue.c src/game/game.c)
+add_executable(breakanoid src/main.c src/logger.c src/vulkan/vulkan_engine.c src/SDL/SDL_backend.c src/util/deletion_queue.c src/game/game.c)
 
 # Add external include directories
 target_include_directories(breakanoid SYSTEM PRIVATE ${Vulkan_INCLUDE_DIR})
