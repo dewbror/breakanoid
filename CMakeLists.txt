@@ -14,11 +14,6 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_EXTENSIONS False)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-# Set build flags
-set(CMAKE_C_FLAGS_DEBUG "-ggdb3 -O0")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "-ggdb3 -O2")
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Get the current Git branch
@@ -161,7 +156,19 @@ target_include_directories(breakanoid PRIVATE ${CMAKE_SOURCE_DIR}/src/)
 target_link_libraries(breakanoid PRIVATE m SDL3::SDL3-shared ${Vulkan_LIBRARIES})
 
 # Set target compile options
-target_compile_options(breakanoid PRIVATE 
+target_compile_options(breakanoid PRIVATE
+    $<$<CONFIG:Debug>:-ggdb3>
+    $<$<CONFIG:Debug>:-O0>
+    $<$<CONFIG:Debug>:-fsanitize=address>
+    
+    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:-DNDEBUG>
+    $<$<CONFIG:Release>:-D_FORTIFY_SOURCE=2>
+
+    $<$<CONFIG:RelWithDebInfo>:-ggdb3>
+    $<$<CONFIG:RelWithDebInfo>:-O2>
+    $<$<CONFIG:RelWithDebInfo>:-D_FORTIFY_SOURCE=2>
+
     -pedantic 
     -Wall 
     -Wextra 
@@ -193,5 +200,9 @@ target_compile_options(breakanoid PRIVATE
     -Wsuggest-attribute=format
     -Wmissing-format-attribute
     -Wsuggest-attribute=cold
+    -fstack-protector-strong
 )
 
+target_link_options(breakanoid PRIVATE
+    $<$<CONFIG:Debug>:-fsanitize=address>  # Add AddressSanitizer for Debug builds
+)
