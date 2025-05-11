@@ -45,11 +45,9 @@ AllowAllParametersOfDeclarationOnNextLine: true
 AllowBreakBeforeNoexceptSpecifier: Never
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortCompoundRequirementOnASingleLine: true
-AllowShortEnumsOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: Never
-AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
@@ -62,7 +60,6 @@ BinPackParameters: true
 BitFieldColonSpacing: Both
 BraceWrapping:
   AfterCaseLabel: false
-  AfterClass:     false
   AfterControlStatement: Never
   AfterEnum:        false
   AfterExternBlock: false
@@ -78,7 +75,6 @@ BraceWrapping:
   IndentBraces:     false
   SplitEmptyFunction: true
   SplitEmptyRecord: true
-  SplitEmptyNamespace: true
 BreakAdjacentStringLiterals: true
 BreakAfterAttributes: Leave
 BreakAfterJavaFieldAnnotations: false
@@ -126,8 +122,8 @@ IncludeCategories:
 IncludeIsMainRegex: '(Test)?$'
 IncludeIsMainSourceRegex: ''
 IndentAccessModifiers: false
-IndentCaseBlocks: false
-IndentCaseLabels: false
+IndentCaseBlocks: true
+IndentCaseLabels: true
 IndentExternBlock: AfterExternBlock
 IndentGotoLabels: true
 IndentPPDirectives: None
@@ -144,10 +140,8 @@ IntegerLiteralSeparator:
   DecimalMinDigits: 0
   Hex:              0
   HexMinDigits:     0
-JavaScriptQuotes: Leave
-JavaScriptWrapImports: true
 KeepEmptyLinesAtTheStartOfBlocks: true
-KeepEmptyLinesAtEOF: false
+KeepEmptyLinesAtEOF: true
 LambdaBodyIndentation: Signature
 LineEnding: DeriveLF
 MacroBlockBegin: ''
@@ -217,7 +211,6 @@ SpacesInParensOptions:
   InEmptyParentheses: false
   Other: false
 SpacesInSquareBrackets: false
-Standard: Latest
 StatementAttributeLikeMacros:
   - Q_EMIT
 StatementMacros:
@@ -226,10 +219,4 @@ StatementMacros:
 TabWidth: 4
 UseTab:   Never
 VerilogBreakBetweenInstancePorts: true
-WhitespaceSensitiveMacros:
-  - BOOST_PP_STRINGIZE
-  - CF_SWIFT_NAME
-  - NS_SWIFT_NAME
-  - PP_STRINGIZE
-  - STRINGIZE
 ...
