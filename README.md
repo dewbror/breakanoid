@@ -18,7 +18,7 @@ Dependencies
 
 How to Build (with cmake)
 -----------------------
-
+test
 You must have the vulkan SDK installed.
 
 The cmake config will clone the project dependencies into the project directory by default, this includes cloneing SDL and building SDL as a part of the project. If you would rather use your installed version of SDL3, include the cmake flag "-DUSE_SYSTEM_SDL=ON" when configuring cmake.
