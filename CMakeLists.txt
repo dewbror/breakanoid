@@ -86,10 +86,10 @@ set(stb_DIR  "${CMAKE_SOURCE_DIR}/external/stb")
 # Enable shared libraries globally
 set(BUILD_SHARED_LIBS ON)
 
-set(SDL3_SHARED_ENABLED_BY_DEFAULT ON  CACHE BOOL "Enable SDL shared library")      # Ensure the shared library is enabled
-set(SDL3_STATIC_ENABLED_BY_DEFAULT OFF CACHE BOOL "Disable SDL static library")    # Disable the static library
-set(SDL3_TESTS                     OFF CACHE BOOL "Disable SDL test programs" FORCE)     # Disable SDL test programs
-set(SDL3_INSTALL                   OFF CACHE BOOL "Disable SDL instalation rules") # Disable SDL installation rules 
+set(SDL3_SHARED_ENABLED_BY_DEFAULT ON  CACHE BOOL "Enable SDL shared library")       # Ensure the shared library is enabled
+set(SDL3_STATIC_ENABLED_BY_DEFAULT OFF CACHE BOOL "Disable SDL static library")      # Disable the static library
+set(SDL3_TESTS                     OFF CACHE BOOL "Disable SDL test programs" FORCE) # Disable SDL test programs
+set(SDL3_INSTALL                   OFF CACHE BOOL "Disable SDL instalation rules")   # Disable SDL installation rules 
 
 # Disable unnecessary SDL3 features to reduce build size (dep_repos/SDL/CMakeLists.txt:250-274)
 set(SDL_AUDIO_DEFAULT      OFF CACHE BOOL "Disable SDL audio support")
