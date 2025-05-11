@@ -362,7 +362,7 @@ bool vulkan_engine_init(vulkan_engine* p_engine) {
         LOG_ERROR("Failed to initialize vulkan engine");
         return false;
     }
-
+    
     // Create image views
     // if(!create_image_views(p_engine)) {
     //     printf("Failed to create image views\n");

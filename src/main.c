@@ -22,7 +22,12 @@ int main(int argc, char** argv) {
     // UNUSED
     (void)argc;
     (void)argv;
+    
     LOG_TRACE("Entering main()");
+
+    // Open log file
+    open_log_file();
+
 #ifndef NDEBUG
     LOG_INFO("This is a debug build");
 #endif
@@ -36,10 +41,17 @@ int main(int argc, char** argv) {
     if(success) {
         // Havent decided weather to zero initiate this struct or not.
         game_s game;
-        game_run(&engine, &game);
+        success = game_run(&engine, &game);
         game_destroy(&game);
     }
     // Destroy vulkan engine
     vulkan_engine_destroy(&engine);
-    return success;
+
+    // Close log file
+    close_log_file();
+
+    if(!success) {
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }

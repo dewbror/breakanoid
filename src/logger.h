@@ -15,10 +15,20 @@ typedef enum {
 } log_level;
 
 /**
- * Prints formatted string to stderr.
+ * Open log file.
+ */
+void open_log_file(void);
+
+/**
+ * Close log file.
+ */
+void close_log_file(void);
+
+/**
+ * NOT MEANT TO BE USED, USE LOG_ERROR, _INFO, etc. instead.
  *
  * @param level The log_level of the message.
- * @param fmt The string to be formatted (with type formatters)
+ * @param fmt The string to be printed
  */
 void logger__msg(log_level level, const char* file, int line, const char* fmt, ...);
 
