@@ -6,16 +6,17 @@ Breakanoid is an open source, 2D game written in C99 using vulkan 1.0 and SDL3.
 TODO
 ----
 - Fix "clone_dependencies.bat"
+- Improve the "How to Build" section
 
 Dependencies
 ------------
 
   - [Vulkan SDK](https://vulkan.lunarg.com)
   - [SDL3](https://github.com/libsdl-org/SDL)
-  - [CGLM](https://github.com/recp/cglm)
+  - [cglm](https://github.com/recp/cglm)
   - [stb_image](https://github.com/nothings/stb)
 
-How to build (with cmake)
+How to Build (with cmake)
 -----------------------
 
 You must have the vulkan SDK installed.
