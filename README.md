@@ -18,32 +18,28 @@ Dependencies
 
 How to Build (with cmake)
 -----------------------
-test
 You must have the vulkan SDK installed.
 
-The cmake config will clone the project dependencies into the project directory by default, this includes cloneing SDL and building SDL as a part of the project. If you would rather use your installed version of SDL3, include the cmake flag "-DUSE_SYSTEM_SDL=ON" when configuring cmake.
+The cmake will fetch the project dependencies (except for the vulkan SDK) into the project directory. SDL is added as a subdirectory and built along side Breakanoid. Include the flag "-DUSE_SYSTEM_SDL=ON" when configuring cmake not not fetch SDL and instead use the system installed SDL.
 
-Build release ("-O3 -DNDEBUG")
+Build release
 ```
 cmake -DCMAKE_BUILD_TYPE=Release -S . -B ./build_release
 cmake --build ./build_release 
 ```
-Build debug ("-ggdb3 -O0")
+Build debug
 ```
 cmake -DCMAKE_BUILD_TYPE=Debug -S . -B ./build_debug
 cmake --build ./build_debug
 ```
-Build release with debug info ("-ggdb3 -O2")
+Build release with debug info
 ```
 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -S . -B ./build_relwithdebinfo
 cmake --build ./build_relwithdebinfo
 ```
-Build with Ninja Multi-Config
+The Debug build links to ASan, enable memory leak detection with
 ```
-cmake -DCMAKE_DEFAULT_BUILD_TYPE=Debug -G "Ninja Multi-Config" -S . -B ./build
-cmake --build ./build --config Release
-cmake --build ./build --config Debug
-cmake --build ./build --config RelWithDebInfo
+export ASAN_OPTIONS=detect_leaks=1
 ```
 
 License
