@@ -22,4 +22,5 @@ blender
 external
 .syntactic*
 .cache
+compile_commands.json
 
