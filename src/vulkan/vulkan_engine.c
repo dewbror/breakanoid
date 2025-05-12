@@ -307,6 +307,7 @@ static VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspe
                                      uint32_t mip_levels);
 
 bool vulkan_engine_init(vulkan_engine* p_engine) {
+    // Check if p_engine is NULL
     if(p_engine == NULL) {
         LOG_ERROR("vulkan_engine_init: p_engine is NULL");
         return false;
