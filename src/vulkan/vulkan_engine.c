@@ -307,6 +307,10 @@ static VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspe
                                      uint32_t mip_levels);
 
 bool vulkan_engine_init(vulkan_engine* p_engine) {
+    if(p_engine == NULL) {
+        LOG_ERROR("vulkan_engine_init: p_engine is NULL");
+        return false;
+    }
 
     // Set window extent, this will be performed from some settings file in the future.
     p_engine->window_extent.height = HEIGHT;
@@ -409,6 +413,12 @@ bool vulkan_engine_destroy(vulkan_engine* p_engine) {
 }
 
 static bool create_instance(vulkan_engine* p_engine) {
+    // Check if p_engine is NULL
+    if(p_engine == NULL) {
+        LOG_ERROR("create_instance: p_engine is NULL");
+        return false;
+    }
+
     // Checks if all of the requested layers are available.
     if(enable_validation_layers && !check_validation_layer_support()) {
         LOG_ERROR("Validation layers requested but not available. Requesting validation layers when not avaiable is "
