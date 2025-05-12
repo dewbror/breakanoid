@@ -45,9 +45,12 @@ deletion_queue* deletion_queue_alloc(void);
 bool deletion_queue_queue(deletion_queue* p_queue, void* p_resource, void (*deletion_func)(void*));
 
 /**
- * Flush the deletion queue. Callbacks the deletion functions in each deletion queue from last to first.
+ * Flush the deletion queue. Callbacks the deletion functions in the deletion queue from last to first. *pp_queue is
+ * freed and set to NULL
  *
- * @param[in] p_queue Pointer to the deletion_queue to flush.
+ * \param[in] pp_queue Double pointer to the deletion_queue to flush.
+ *
+ * \return True if successful, false if failed.
  */
-void deletion_queue_flush(deletion_queue* p_queue);
+bool deletion_queue_flush(deletion_queue** pp_queue);
 #endif // DELETION_QUEUE_H_

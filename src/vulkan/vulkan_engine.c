@@ -385,10 +385,27 @@ bool vulkan_engine_init(vulkan_engine* p_engine) {
     return true;
 }
 
-void vulkan_engine_destroy(vulkan_engine* p_engine) {
+bool vulkan_engine_destroy(vulkan_engine* p_engine) {
+    // Check if p_engine is NULL
+    if(p_engine == NULL) {
+        LOG_ERROR("vulkan_engine_destroy: p_engine is NULL");
+        return false;
+    }
+
     // Flush deletion queue
-    deletion_queue_flush(p_engine->p_main_delq);
+    if(!deletion_queue_flush(&p_engine->p_main_delq)) {
+        LOG_ERROR("Failed to destroy vulkan engine");
+        return false;
+    }
+
+    // Check that p_main_delq is NULL after flushing
+    if(p_engine->p_main_delq != NULL) {
+        LOG_ERROR("Failed to destroy vulkan engine");
+        return false;
+    }
+
     LOG_INFO("Vulkan engine destroyed");
+    return true;
 }
 
 static bool create_instance(vulkan_engine* p_engine) {

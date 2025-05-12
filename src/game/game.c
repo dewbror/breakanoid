@@ -31,7 +31,16 @@ bool game_run(struct vulkan_engine* p_engine, game_s* p_game) {
  */
 bool game_destroy(game_s* p_game) {
     // Flush deletion queue
-    deletion_queue_flush(p_game->p_delq);
+    if(!deletion_queue_flush(&p_game->p_delq)) {
+        LOG_ERROR("Failed to destroy game");
+        return false;
+    }
+
+    // Check that p_delq is NULL
+    if(p_game->p_delq != NULL) {
+        LOG_ERROR("Failed to destroy game");
+        return false;
+    }
 
     LOG_INFO("Game destroyed");
     return true;

@@ -25,7 +25,6 @@ int main(int argc, char** argv) {
 
     LOG_DEBUG("Entering main()");
 
-    // Open log file
     open_log_file();
 
 #ifndef NDEBUG
@@ -33,25 +32,28 @@ int main(int argc, char** argv) {
 #endif
     LOG_INFO("Build version: %s+%s.%s", breakanoid_VERSION, GIT_BRANCH, GIT_COMMIT_HASH);
 
-    // Ive decided to not zero initialize the vulkan_engine, it takes time and i
-    // want to write my code such that no field is used befor it should be used.
     vulkan_engine engine;
-    // memset(&engine, 0, sizeof(vulkan_engine));
     bool success = vulkan_engine_init(&engine);
     if(success) {
-        // Havent decided weather to zero initiate this struct or not.
+        // Start game
         game_s game;
         success = game_run(&engine, &game);
         game_destroy(&game);
     }
+
     // Destroy vulkan engine
-    vulkan_engine_destroy(&engine);
-
-    // Close log file
-    close_log_file();
-
-    if(!success) {
+    if(!vulkan_engine_destroy(&engine) || !success) {
+        LOG_ERROR("Exiting with failure");
+        close_log_file();
         return EXIT_FAILURE;
     }
+
+    close_log_file();
+    // if(!success) {
+    //     LOG_ERROR("Exiting with failure");
+    //     return EXIT_FAILURE;
+    // }
+
+    LOG_INFO("Exiting with success");
     return EXIT_SUCCESS;
 }
