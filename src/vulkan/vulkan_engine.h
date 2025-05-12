@@ -45,10 +45,10 @@ typedef struct vulkan_engine {
 /**
  * Initiate the vulkan engine.
  *
- * @param[in] p_engine Pointer to the vulkan_engine to be initiated. Must be deleted using vulkan_engine_destroy before
+ * \param[in] p_engine Pointer to the vulkan_engine to be initiated. Must be deleted using vulkan_engine_destroy before
  * exiting game.
  *
- * @return True if successful, false if failed.
+ * \return True if successful, false if failed.
  */
 bool vulkan_engine_init(vulkan_engine* p_engine);
 

@@ -29,18 +29,18 @@ typedef struct deletion_queue {
 /**
  * Allocate a new deletion_queue on the heap, the deletion queue is deleted when using deletion_queue_flush.
  *
- * @return Pointer to newly allocated deletion_queue.
+ * \return Pointer to newly allocated deletion_queue.
  */
 deletion_queue* deletion_queue_alloc(void);
 
 /**
  * Allocate a new deletion node on the heap and add it to the end of the deletion queue.
  *
- * @param[in] p_queue       Pointer to the deletion queue the new node is added to.
- * @param[in] p_resource    Pointer to the resource to be deleted by the deletion function.
- * @param[in] deletion_func Pointer to the function that will delete the resource.
+ * \param[in] p_queue Pointer to the deletion queue the new node is added to.
+ * \param[in] p_resource Pointer to the resource to be deleted by the deletion function.
+ * \param[in] deletion_func Pointer to the function that will delete the resource.
  *
- * @returns True if successful, false if failed.
+ * \returns True if successful, false if failed.
  */
 bool deletion_queue_queue(deletion_queue* p_queue, void* p_resource, void (*deletion_func)(void*));
 

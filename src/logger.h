@@ -9,11 +9,11 @@
 #include "config.h"
 
 typedef enum {
-    LOG_ERROR = 0,
-    LOG_WARN  = 1,
-    LOG_INFO  = 2,
-    LOG_DEBUG = 3,
-    LOG_TRACE = 4
+    LOG_ERROR = 0, // ERROR should always result in application crash
+    LOG_WARN  = 1, // WARN are errors that dont need to crash the application.
+    LOG_INFO  = 2, // INFO is high level information about what the applciaiton is currently doing.
+    LOG_DEBUG = 3, // DEBUG is low level information about what the application is doing.
+    LOG_TRACE = 4  // TRACE is very low and very verbose information of what the application is doing.
 } log_level;
 
 /**
@@ -29,18 +29,19 @@ void close_log_file(void);
 /**
  * NOT MEANT TO BE USED, USE LOG_ERROR, _INFO, etc. instead.
  *
- * @param level The log_level of the message.
- * @param fmt The string to be printed
+ * \param[in] level The log_level of the message.
+ * \param[in] fmt A printf-style message format string.
+ * \param[in] ... Additional parameters matching % tokens in the "fmt" string, if any.
  */
 void logger__msg(log_level level, const char* file, int line, const char* fmt, ...) FORMAT_ATTR(4, 5);
 
 // If LOG_LEVEL is not defined, use default LOG_LEVEL
 #ifndef LOG_LEVEL
 #ifdef NDEBUG
-// Default for NDEBUG is LOG_WARN
+// Default LOG_LEVEL for NDEBUG mode is LOG_WARN
 #define LOG_LEVEL 2
 #else
-// Default in debug mode is LOG_DEBUG
+// Default LOG_LEVEL in debug mode is LOG_DEBUG
 #define LOG_LEVEL 3
 #endif
 #endif

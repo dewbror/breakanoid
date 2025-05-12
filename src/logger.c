@@ -33,7 +33,7 @@ void open_log_file(void) {
         return;
     }
 
-    LOG_INFO("Opened log file: %s", log_file_name);
+    LOG_INFO("Log file opened: %s", log_file_name);
 }
 
 void close_log_file(void) {
@@ -45,12 +45,12 @@ void close_log_file(void) {
         int ret = fclose(log_file);
         if(ret < 0) {
             // Handle fclose error
-            LOG_ERROR("Failed to close log file: %s", log_file_name);
+            LOG_WARN("Failed to close log file: %s", log_file_name);
             return;
         }
         // Set free pointer to NULL
         log_file = NULL;
-        LOG_INFO("Closed log file: %s", log_file_name);
+        LOG_INFO("Log file closed: %s", log_file_name);
     } else {
         LOG_WARN("Tried to close log file: %s, but file pointer was NULL", log_file_name);
     }
