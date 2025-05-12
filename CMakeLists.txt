@@ -155,54 +155,164 @@ target_include_directories(breakanoid PRIVATE ${CMAKE_SOURCE_DIR}/src/)
 # Link libraries
 target_link_libraries(breakanoid PRIVATE m SDL3::SDL3-shared ${Vulkan_LIBRARIES})
 
-# Set target compile options
-target_compile_options(breakanoid PRIVATE
-    $<$<CONFIG:Debug>:-ggdb3>
-    $<$<CONFIG:Debug>:-O0>
-    $<$<CONFIG:Debug>:-fsanitize=address>
-    
-    $<$<CONFIG:Release>:-O3>
-    $<$<CONFIG:Release>:-DNDEBUG>
-    $<$<CONFIG:Release>:-D_FORTIFY_SOURCE=2>
+# Compiler-specific flags
+if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+    # GCC
+    target_compile_options(breakanoid PRIVATE 
+        -pedantic 
+        -Wall 
+        -Wextra 
+        -fmessage-length=0 
+        -Wno-unused-variable 
+        -Wfloat-equal 
+        -Wundef 
+        -Wshadow 
+        -Wpointer-arith 
+        -Wcast-align 
+        -Wwrite-strings 
+        -Wcast-qual 
+        -Wswitch-enum 
+        -Wconversion 
+        -Wunreachable-code 
+        -Wunused-macros 
+        -Wduplicated-cond 
+        -Wduplicated-branches
+        -Wvla
+        -Wvector-operation-performance
+        -Wsuggest-attribute=pure
+        -Wsuggest-attribute=const
+        -Wsuggest-attribute=noreturn
+        -Wmissing-noreturn
+        -Wsuggest-attribute=malloc
+        -Wsuggest-attribute=format
+        -Wmissing-format-attribute
+        -Wsuggest-attribute=cold
+        -fstack-protector-strong
+    )
+    # Build type specific flags
+    if(CMAKE_BUILD_TYPE MATCHES "Debug")
+        target_compile_options(breakanoid PRIVATE
+            -O0
+            -ggdb3
+            -fsanitize=address,undefined
+        )
+        target_link_options(breakanoid PRIVATE
+            -fsanitize=address,undefined
+        )
+    elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
+        target_compile_options(breakanoid PRIVATE
+            -O2
+            -DNDEBUG
+            -D_FORTIFY_SOURCE=2
+        )
+    elseif(CMAKE_BUILD_TYPE MATCHES "Release")
+        target_compile_options(breakanoid PRIVATE
+            -O3
+            -DNDEBUG
+            -D_FORTIFY_SOURCE=2
+        )
+    endif()
+elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    # Clang
+    target_compile_options(my_program PRIVATE 
+        -Wall 
+        -Wextra 
+        -Wpedantic 
+        -Wshadow 
+        -Wundef
+    )
+    # Build type specific flags
+    if(CMAKE_BUILD_TYPE MATCHES "Debug")
+        target_compile_options(breakanoid PRIVATE
+            -O0
+            -g3
+            -fsanitize=address,undefined
+        )
+        target_link_options(breakanoid PRIVATE
+            -fsanitize=address,undefined
+        )
+    elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
+        target_compile_options(breakanoid PRIVATE
+            -O2
+            -DNDEBUG
+        )
+    elseif(CMAKE_BUILD_TYPE MATCHES "Release")
+        target_compile_options(breakanoid PRIVATE
+            -O3
+            -DNDEBUG
+        )
+    endif()
+elseif(CMAKE_C_COMPILER_ID MATCHES "MSVC")
+    # MSVC
+    target_compile_options(breakanoid PRIVATE 
+        /W4
+    )
+    # Build type specific flags
+    # if(CMAKE_BUILD_TYPE MATCHES "Debug")
+    #     target_compile_options(breakanoid PRIVATE
+    #         -O0
+    #         -g3
+    #     )
+    # elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
+    #     target_compile_options(breakanoid PRIVATE
+    #         -O2
+    #         -DNDEBUG
+    #     )
+    # elseif(CMAKE_BUILD_TYPE MATCHES "Release")
+    #     target_compile_options(breakanoid PRIVATE
+    #         -O3
+    #         -DNDEBUG
+    #     )
+    # endif()
+endif()
 
-    $<$<CONFIG:RelWithDebInfo>:-ggdb3>
-    $<$<CONFIG:RelWithDebInfo>:-O2>
-    $<$<CONFIG:RelWithDebInfo>:-D_FORTIFY_SOURCE=2>
-
-    -pedantic 
-    -Wall 
-    -Wextra 
-    -fmessage-length=0 
-    -Wno-unused-variable 
-    -Wfloat-equal 
-    -Wundef 
-    -Wshadow 
-    -Wpointer-arith 
-    -Wcast-align 
-    # -Wstrict-overflow=5 
-    -Wwrite-strings 
-    # -Waggregate-return 
-    -Wcast-qual 
-    -Wswitch-enum 
-    -Wconversion 
-    -Wunreachable-code 
-    -Wunused-macros 
-    -Wduplicated-cond 
-    -Wduplicated-branches
-    -Wvla
-    -Wvector-operation-performance
-    -Wsuggest-attribute=pure
-    -Wsuggest-attribute=const
-    -Wsuggest-attribute=noreturn
-    -Wmissing-noreturn
-    -Wsuggest-attribute=malloc
-    # -Wsuggest-attribute=returns_nonnull
-    -Wsuggest-attribute=format
-    -Wmissing-format-attribute
-    -Wsuggest-attribute=cold
-    -fstack-protector-strong
-)
-
-target_link_options(breakanoid PRIVATE
-    $<$<CONFIG:Debug>:-fsanitize=address>  # Add AddressSanitizer for Debug builds
-)
+# target_compile_options(breakanoid PRIVATE
+#     $<$<CONFIG:Debug>:-ggdb3>
+#     $<$<CONFIG:Debug>:-O0>
+#     $<$<CONFIG:Debug>:-fsanitize=address,undefined>
+#     
+#     $<$<CONFIG:Release>:-O3>
+#     $<$<CONFIG:Release>:-DNDEBUG>
+#     $<$<CONFIG:Release>:-D_FORTIFY_SOURCE=2>
+# 
+#     $<$<CONFIG:RelWithDebInfo>:-ggdb3>
+#     $<$<CONFIG:RelWithDebInfo>:-O2>
+#     $<$<CONFIG:RelWithDebInfo>:-D_FORTIFY_SOURCE=2>
+# 
+#     -pedantic 
+#     -Wall 
+#     -Wextra 
+#     -fmessage-length=0 
+#     -Wno-unused-variable 
+#     -Wfloat-equal 
+#     -Wundef 
+#     -Wshadow 
+#     -Wpointer-arith 
+#     -Wcast-align 
+#     # -Wstrict-overflow=5 
+#     -Wwrite-strings 
+#     # -Waggregate-return 
+#     -Wcast-qual 
+#     -Wswitch-enum 
+#     -Wconversion 
+#     -Wunreachable-code 
+#     -Wunused-macros 
+#     -Wduplicated-cond 
+#     -Wduplicated-branches
+#     -Wvla
+#     -Wvector-operation-performance
+#     -Wsuggest-attribute=pure
+#     -Wsuggest-attribute=const
+#     -Wsuggest-attribute=noreturn
+#     -Wmissing-noreturn
+#     -Wsuggest-attribute=malloc
+#     # -Wsuggest-attribute=returns_nonnull
+#     -Wsuggest-attribute=format
+#     -Wmissing-format-attribute
+#     -Wsuggest-attribute=cold
+#     -fstack-protector-strong
+# )
+# 
+# target_link_options(breakanoid PRIVATE
+#     $<$<CONFIG:Debug>:-fsanitize=address,undefined>  # Add ASan and UBSan for Debug builds
+# )
