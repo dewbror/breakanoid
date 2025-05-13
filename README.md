@@ -36,6 +36,6 @@ cmake --build ./build_debug
 License
 -------
 
-The source code in this repository is licensed under the zlib License, see LICENSE. This license applies only to the source code files.
+The source code in this repository is licensed under the zlib License, see [LICENSE.txt](https://github.com/dewbror/breakanoid/blob/master/LICENSE.txt). This license applies only to the source code files.
 
 --- end of README ---
