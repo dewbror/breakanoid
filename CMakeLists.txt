@@ -202,7 +202,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
     elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
         target_compile_options(breakanoid PRIVATE
             -O2
-            -DNDEBUG
+            -ggdb3
             -D_FORTIFY_SOURCE=2
         )
     elseif(CMAKE_BUILD_TYPE MATCHES "Release")
@@ -234,7 +234,7 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
     elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
         target_compile_options(breakanoid PRIVATE
             -O2
-            -DNDEBUG
+            -ggdb3
         )
     elseif(CMAKE_BUILD_TYPE MATCHES "Release")
         target_compile_options(breakanoid PRIVATE
@@ -250,18 +250,17 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "MSVC")
     # Build type specific flags
     # if(CMAKE_BUILD_TYPE MATCHES "Debug")
     #     target_compile_options(breakanoid PRIVATE
-    #         -O0
-    #         -g3
+    #         /Zi
     #     )
     # elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
     #     target_compile_options(breakanoid PRIVATE
-    #         -O2
-    #         -DNDEBUG
+    #         /O2
+    #         /Zi
     #     )
     # elseif(CMAKE_BUILD_TYPE MATCHES "Release")
     #     target_compile_options(breakanoid PRIVATE
-    #         -O3
-    #         -DNDEBUG
+    #         /O3
+    #         /DNDEBUG
     #     )
     # endif()
 endif()
