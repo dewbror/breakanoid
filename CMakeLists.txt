@@ -234,7 +234,7 @@ elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
     elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
         target_compile_options(breakanoid PRIVATE
             -O2
-            -ggdb3
+            -g3
         )
     elseif(CMAKE_BUILD_TYPE MATCHES "Release")
         target_compile_options(breakanoid PRIVATE
