@@ -8,23 +8,23 @@
 
 #include "config.h"
 
-typedef enum {
-    LOG_ERROR = 0, // ERROR should always result in application crash
-    LOG_WARN  = 1, // WARN are errors that dont need to crash the application.
-    LOG_INFO  = 2, // INFO is high level information about what the applciaiton is currently doing.
-    LOG_DEBUG = 3, // DEBUG is low level information about what the application is doing.
-    LOG_TRACE = 4  // TRACE is very low and very verbose information of what the application is doing.
-} log_level;
+#define LOG_LEVEL_ERROR 0
+#define LOG_LEVEL_WARN  1
+#define LOG_LEVEL_INFO  2
+#define LOG_LEVEL_DEBUG 3
+#define LOG_LEVEL_TRACE 4
 
 /**
- * Open log file.
+ * Open file file_name for logging. If file_name = NULL will set logging to stderr.
+ *
+ * \param[in] file_name A string with the name of the log file to open.
  */
-void open_log_file(void);
+void logger_open(const char* file_name);
 
 /**
  * Close log file.
  */
-void close_log_file(void);
+void logger_close(void);
 
 /**
  * NOT MEANT TO BE USED, USE LOG_ERROR, _INFO, etc. instead.
@@ -33,42 +33,47 @@ void close_log_file(void);
  * \param[in] fmt A printf-style message format string.
  * \param[in] ... Additional parameters matching % tokens in the "fmt" string, if any.
  */
-void logger__msg(log_level level, const char* file, int line, const char* fmt, ...) FORMAT_ATTR(4, 5);
+void logger__msg(int level, const char* file, int line, const char* fmt, ...) FORMAT_ATTR(4, 5);
 
 // If LOG_LEVEL is not defined, use default LOG_LEVEL
 #ifndef LOG_LEVEL
 #ifdef NDEBUG
 // Default LOG_LEVEL for NDEBUG mode is LOG_WARN
-#define LOG_LEVEL 2
+#define LOG_LEVEL LOG_LEVEL_WARN
 #else
 // Default LOG_LEVEL in debug mode is LOG_DEBUG
-#define LOG_LEVEL 3
+#define LOG_LEVEL LOG_LEVEL_DEBUG
 #endif
 #endif
 
-#define LOG_ERROR(...)                                                                                                 \
-    do {                                                                                                               \
-        if(LOG_LEVEL >= LOG_ERROR)                                                                                     \
-            logger__msg(LOG_ERROR, __FILE__, __LINE__, __VA_ARGS__);                                                   \
-    } while(0)
-#define LOG_WARN(...)                                                                                                  \
-    do {                                                                                                               \
-        if(LOG_LEVEL >= LOG_WARN)                                                                                      \
-            logger__msg(LOG_WARN, __FILE__, __LINE__, __VA_ARGS__);                                                    \
-    } while(0)
-#define LOG_INFO(...)                                                                                                  \
-    do {                                                                                                               \
-        if(LOG_LEVEL >= LOG_INFO)                                                                                      \
-            logger__msg(LOG_INFO, __FILE__, __LINE__, __VA_ARGS__);                                                    \
-    } while(0)
-#define LOG_DEBUG(...)                                                                                                 \
-    do {                                                                                                               \
-        if(LOG_LEVEL >= LOG_DEBUG)                                                                                     \
-            logger__msg(LOG_DEBUG, __FILE__, __LINE__, __VA_ARGS__);                                                   \
-    } while(0)
-#define LOG_TRACE(...)                                                                                                 \
-    do {                                                                                                               \
-        if(LOG_LEVEL >= LOG_TRACE)                                                                                     \
-            logger__msg(LOG_TRACE, __FILE__, __LINE__, __VA_ARGS__);                                                   \
-    } while(0)
+#if LOG_LEVEL >= LOG_LEVEL_ERROR
+#define LOG_ERROR(...) logger__msg(LOG_LEVEL_ERROR, __FILE__, __LINE__, __VA_ARGS__);
+#else
+#define LOG_ERROR(...) ((void)0)
+#endif
+
+#if LOG_LEVEL >= LOG_LEVEL_WARN
+#define LOG_WARN(...) logger__msg(LOG_LEVEL_WARN, __FILE__, __LINE__, __VA_ARGS__);
+#else
+#define LOG_WARN(...) ((void)0)
+#endif
+
+#if LOG_LEVEL >= LOG_LEVEL_INFO
+#define LOG_INFO(...) logger__msg(LOG_LEVEL_INFO, __FILE__, __LINE__, __VA_ARGS__);
+#else
+#define LOG_INFO(...) ((void)0)
+#endif
+
+#if LOG_LEVEL >= LOG_LEVEL_DEBUG
+#define LOG_DEBUG(...) logger__msg(LOG_LEVEL_DEBUG, __FILE__, __LINE__, __VA_ARGS__);
+#else
+#define LOG_DEBUG(...) ((void)0)
+#endif
+
+#if LOG_LEVEL >= LOG_LEVEL_TRACE
+#define LOG_TRACE(...) logger__msg(LOG_LEVEL_TRACE, __FILE__, __LINE__, __VA_ARGS__);
+#else
+#define LOG_TRACE(...) ((void)0)
+#endif
+
 #endif // LOGGER_H_

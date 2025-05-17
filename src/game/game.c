@@ -8,9 +8,9 @@
 #include "util/deletion_queue.h"
 
 /**
- * 
+ *
  */
-bool game_run(struct vulkan_engine* p_engine, game_s* p_game) {
+bool game_run(struct vulkan_engine_s* p_engine, game_t* p_game) {
     // UNUSED
     (void)p_engine;
     (void)p_game;
@@ -19,7 +19,7 @@ bool game_run(struct vulkan_engine* p_engine, game_s* p_game) {
     p_game->p_delq = deletion_queue_alloc();
     if(p_game->p_delq == NULL) {
         // Handle deletion_queue_alloc error
-        LOG_ERROR("Game failed to run");
+        LOG_ERROR("Failed to allocate deletion queue");
         return false;
     }
     LOG_INFO("Game running");
@@ -27,18 +27,22 @@ bool game_run(struct vulkan_engine* p_engine, game_s* p_game) {
 }
 
 /**
- * 
+ *
  */
-bool game_destroy(game_s* p_game) {
+bool game_destroy(game_t* p_game) {
+    if(p_game == NULL) {
+        LOG_ERROR("game_destroy: p_game is NULL");
+        return false;
+    }
     // Flush deletion queue
     if(!deletion_queue_flush(&p_game->p_delq)) {
-        LOG_ERROR("Failed to destroy game");
+        LOG_ERROR("Failed flush deletion queue");
         return false;
     }
 
     // Check that p_delq is NULL
     if(p_game->p_delq != NULL) {
-        LOG_ERROR("Failed to destroy game");
+        LOG_ERROR("Failed to flush deletion queue");
         return false;
     }
 

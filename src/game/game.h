@@ -13,9 +13,9 @@
  */
 typedef struct game_s {
     int temp;
-    struct deletion_queue* p_delq;
-} game_s;
+    struct deletion_queue_s* p_delq;
+} game_t;
 
-bool game_run(struct vulkan_engine* p_engine, game_s* p_game);
-bool game_destroy(game_s* p_game);
+bool game_run(struct vulkan_engine_s* p_engine, game_t* p_game);
+bool game_destroy(game_t* p_game);
 #endif // GAME_H_

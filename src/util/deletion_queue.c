@@ -10,15 +10,14 @@
 #include "util/deletion_queue.h"
 #include "logger.h"
 
-deletion_queue* deletion_queue_alloc(void) {
-    deletion_queue* p_queue = (deletion_queue*)malloc(sizeof(deletion_queue));
-    // TODO: Create my own malloc
+deletion_queue_t* deletion_queue_alloc(void) {
+    // Allocate new deletion queue
+    deletion_queue_t* p_queue = (deletion_queue_t*)malloc(sizeof(deletion_queue_t));
     if(p_queue == NULL) {
         LOG_ERROR("Failed to allocate deletion queue: %s", strerror(errno));
         return NULL;
     }
-    // Memset not necessary since we are setting the field members directly after allocation
-    // memset(p_queue, 0, sizeof(deletion_queue));
+
     p_queue->p_first = NULL;
     p_queue->p_last  = NULL;
 
@@ -26,9 +25,9 @@ deletion_queue* deletion_queue_alloc(void) {
     return p_queue;
 }
 
-bool deletion_queue_queue(deletion_queue* p_queue, void* p_resource, void (*delete_func)(void*)) {
+bool deletion_queue_queue(deletion_queue_t* p_queue, void* p_resource, void (*delete_func)(void*)) {
     // Allocate memory for new deletion_node
-    deletion_node* p_new_node = (deletion_node*)malloc(sizeof(deletion_node));
+    deletion_node_t* p_new_node = (deletion_node_t*)malloc(sizeof(deletion_node_t));
     if(p_new_node == NULL) {
         // Handle malloc error
         LOG_ERROR("Failed to allocate deletion node: %s", strerror(errno));
@@ -40,7 +39,7 @@ bool deletion_queue_queue(deletion_queue* p_queue, void* p_resource, void (*dele
     p_new_node->p_resource  = p_resource;
     p_new_node->p_prev      = NULL;
     p_new_node->delete_func = delete_func;
-    
+
     // Make sure the new node points to the previous node
     if(p_queue->p_last) {
         p_new_node->p_prev = p_queue->p_last;
@@ -53,7 +52,7 @@ bool deletion_queue_queue(deletion_queue* p_queue, void* p_resource, void (*dele
     return true;
 }
 
-bool deletion_queue_flush(deletion_queue** pp_queue) {
+bool deletion_queue_flush(deletion_queue_t** pp_queue) {
     // Check if pp_queue is NULL
     if(pp_queue == NULL) {
         LOG_ERROR("deletion_queue_flush: pp_queue is NULL");
@@ -61,8 +60,8 @@ bool deletion_queue_flush(deletion_queue** pp_queue) {
     }
 
     // Dereference pointer
-    deletion_queue* p_queue = *pp_queue;
-    
+    deletion_queue_t* p_queue = *pp_queue;
+
     // Check if *pp_queue is NULL
     if(p_queue == NULL) {
         LOG_ERROR("deletion_queue_flush: *pp_queue is NULL");
@@ -72,8 +71,8 @@ bool deletion_queue_flush(deletion_queue** pp_queue) {
     // Flush deletion queue
     LOG_DEBUG("Flushing deletion queue");
     while(p_queue->p_last) {
-        deletion_node* p_node = p_queue->p_last;
-        p_queue->p_last       = p_node->p_prev;
+        deletion_node_t* p_node = p_queue->p_last;
+        p_queue->p_last         = p_node->p_prev;
 
         // Call delete function on resource
         if(p_node->delete_func) {

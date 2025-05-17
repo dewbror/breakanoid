@@ -1,11 +1,11 @@
-# Author: William Brorsson (aka s3cty, secty, sector)
+# Author: William Brorsson <dewb@duck.com>
 # Date Created: Mars 26, 2025
 
 # Specify minimum cmake version
 cmake_minimum_required(VERSION 3.5)
 
 # project name and version
-project(breakanoid VERSION 0.1.0 LANGUAGES C)
+project(break VERSION 0.1.0 LANGUAGES C)
 
 # specify C standard
 set(CMAKE_C_STANDARD 99)
@@ -14,34 +14,10 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_EXTENSIONS False)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-# Get the current Git branch
-execute_process(
-    COMMAND git branch --show-current
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_BRANCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-# Get the current Git commit hash (full)
-execute_process(
-    COMMAND git rev-parse HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-# Get the current Git commit hash (short=7)
-execute_process(
-    COMMAND git rev-parse --short=7 HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH_SHORT
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-# Configure version header
-configure_file(${CMAKE_SOURCE_DIR}/src/version.h.in ${CMAKE_SOURCE_DIR}/src/version.h)
+# Set Debug as the default build type if none was specified
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+endif()
 
 # Find Vulkan
 find_package(Vulkan REQUIRED)
@@ -59,7 +35,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 # Check if cglm and stb exist, if either one doesnt then run the dependency clone script
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/cglm" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/stb")
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/cglm" OR NOT EXISTS "${CMAKE_SOURCE_DIR}/external/stb" OR NOT EXISTS "${CMAKE_SOURCE_DIR}/external/cmocka")
     message(STATUS "Running clone script...")
     if(WIN32)
         execute_process(
@@ -117,7 +93,7 @@ else()
         if(WIN32)
             execute_process(
                 COMMAND "${CMAKE_SOURCE_DIR}/scripts/clone_dependencies.bat" SDL_ONLY
-                WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
             )
         else()
             execute_process(
@@ -132,7 +108,7 @@ else()
     else()
         # message(STATUS "SDL found in external")
     endif()
-    add_subdirectory(external/SDL)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/external/SDL)
     set(SDL3_LIBRARIES SDL3::SDL3-shared)
     set(SDL3_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/external/SDL/include)
 endif()
@@ -140,178 +116,18 @@ endif()
 set_property(TARGET SDL3_test PROPERTY EXCLUDE_FROM_ALL TRUE)
 set_property(TARGET SDL3_test PROPERTY EXCLUDE_FROM_DEFAULT_BUILD TRUE)
 
-# Add executables
-add_executable(breakanoid src/main.c src/logger.c src/vulkan/vulkan_engine.c src/SDL/SDL_backend.c src/util/deletion_queue.c src/game/game.c)
+# Set this to siable building cmocka examples, CMOCKA_WITH_EXAMPLES does NOT work!
+set(WITH_EXAMPLES OFF CACHE BOOL "Disable CMocka examples")
+add_subdirectory(${CMAKE_SOURCE_DIR}/external/cmocka)
 
-# Add external include directories
-target_include_directories(breakanoid SYSTEM PRIVATE ${Vulkan_INCLUDE_DIR})
-target_include_directories(breakanoid SYSTEM PRIVATE ${SDL3_INCLUDE_DIR})
-target_include_directories(breakanoid SYSTEM PRIVATE ${cglm_DIR}/include)
-target_include_directories(breakanoid SYSTEM PRIVATE ${stb_DIR})
+# Add external subdirectory
+# add_subdirectory(external)
 
-# Include directory
-target_include_directories(breakanoid PRIVATE ${CMAKE_SOURCE_DIR}/src/)
+# Add source subdirectory
+add_subdirectory(src)
 
-# Link libraries
-target_link_libraries(breakanoid PRIVATE m SDL3::SDL3-shared ${Vulkan_LIBRARIES})
-
-# Compiler-specific flags
-if(CMAKE_C_COMPILER_ID MATCHES "GNU")
-    # GCC
-    target_compile_options(breakanoid PRIVATE 
-        -pedantic 
-        -Wall 
-        -Wextra 
-        -fmessage-length=0 
-        -Wno-unused-variable 
-        -Wfloat-equal 
-        -Wundef 
-        -Wshadow 
-        -Wpointer-arith 
-        -Wcast-align 
-        -Wwrite-strings 
-        -Wcast-qual 
-        -Wswitch-enum 
-        -Wconversion 
-        -Wunreachable-code 
-        -Wunused-macros 
-        -Wduplicated-cond 
-        -Wduplicated-branches
-        -Wvla
-        -Wvector-operation-performance
-        -Wsuggest-attribute=pure
-        -Wsuggest-attribute=const
-        -Wsuggest-attribute=noreturn
-        -Wmissing-noreturn
-        -Wsuggest-attribute=malloc
-        -Wsuggest-attribute=format
-        -Wmissing-format-attribute
-        -Wsuggest-attribute=cold
-        -fstack-protector-strong
-    )
-    # Build type specific flags
-    if(CMAKE_BUILD_TYPE MATCHES "Debug")
-        target_compile_options(breakanoid PRIVATE
-            -O0
-            -ggdb3
-            -fsanitize=address,undefined
-        )
-        target_link_options(breakanoid PRIVATE
-            -fsanitize=address,undefined
-        )
-    elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
-        target_compile_options(breakanoid PRIVATE
-            -O2
-            -ggdb3
-            -D_FORTIFY_SOURCE=2
-        )
-    elseif(CMAKE_BUILD_TYPE MATCHES "Release")
-        target_compile_options(breakanoid PRIVATE
-            -O3
-            -DNDEBUG
-            -D_FORTIFY_SOURCE=2
-        )
-    endif()
-elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
-    # Clang
-    target_compile_options(my_program PRIVATE 
-        -Wall 
-        -Wextra 
-        -Wpedantic 
-        -Wshadow 
-        -Wundef
-    )
-    # Build type specific flags
-    if(CMAKE_BUILD_TYPE MATCHES "Debug")
-        target_compile_options(breakanoid PRIVATE
-            -O0
-            -g3
-            -fsanitize=address,undefined
-        )
-        target_link_options(breakanoid PRIVATE
-            -fsanitize=address,undefined
-        )
-    elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
-        target_compile_options(breakanoid PRIVATE
-            -O2
-            -g3
-        )
-    elseif(CMAKE_BUILD_TYPE MATCHES "Release")
-        target_compile_options(breakanoid PRIVATE
-            -O3
-            -DNDEBUG
-        )
-    endif()
-elseif(CMAKE_C_COMPILER_ID MATCHES "MSVC")
-    # MSVC
-    target_compile_options(breakanoid PRIVATE 
-        /W4
-    )
-    # Build type specific flags
-    # if(CMAKE_BUILD_TYPE MATCHES "Debug")
-    #     target_compile_options(breakanoid PRIVATE
-    #         /Zi
-    #     )
-    # elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
-    #     target_compile_options(breakanoid PRIVATE
-    #         /O2
-    #         /Zi
-    #     )
-    # elseif(CMAKE_BUILD_TYPE MATCHES "Release")
-    #     target_compile_options(breakanoid PRIVATE
-    #         /O3
-    #         /DNDEBUG
-    #     )
-    # endif()
+# Add tests subdirectory (only on UNIX currently)
+option(BUILD_TESTS "Build unit tests" ON)
+if(BUILD_TESTS AND UNIX)
+    add_subdirectory(tests)
 endif()
-
-# target_compile_options(breakanoid PRIVATE
-#     $<$<CONFIG:Debug>:-ggdb3>
-#     $<$<CONFIG:Debug>:-O0>
-#     $<$<CONFIG:Debug>:-fsanitize=address,undefined>
-#     
-#     $<$<CONFIG:Release>:-O3>
-#     $<$<CONFIG:Release>:-DNDEBUG>
-#     $<$<CONFIG:Release>:-D_FORTIFY_SOURCE=2>
-# 
-#     $<$<CONFIG:RelWithDebInfo>:-ggdb3>
-#     $<$<CONFIG:RelWithDebInfo>:-O2>
-#     $<$<CONFIG:RelWithDebInfo>:-D_FORTIFY_SOURCE=2>
-# 
-#     -pedantic 
-#     -Wall 
-#     -Wextra 
-#     -fmessage-length=0 
-#     -Wno-unused-variable 
-#     -Wfloat-equal 
-#     -Wundef 
-#     -Wshadow 
-#     -Wpointer-arith 
-#     -Wcast-align 
-#     # -Wstrict-overflow=5 
-#     -Wwrite-strings 
-#     # -Waggregate-return 
-#     -Wcast-qual 
-#     -Wswitch-enum 
-#     -Wconversion 
-#     -Wunreachable-code 
-#     -Wunused-macros 
-#     -Wduplicated-cond 
-#     -Wduplicated-branches
-#     -Wvla
-#     -Wvector-operation-performance
-#     -Wsuggest-attribute=pure
-#     -Wsuggest-attribute=const
-#     -Wsuggest-attribute=noreturn
-#     -Wmissing-noreturn
-#     -Wsuggest-attribute=malloc
-#     # -Wsuggest-attribute=returns_nonnull
-#     -Wsuggest-attribute=format
-#     -Wmissing-format-attribute
-#     -Wsuggest-attribute=cold
-#     -fstack-protector-strong
-# )
-# 
-# target_link_options(breakanoid PRIVATE
-#     $<$<CONFIG:Debug>:-fsanitize=address,undefined>  # Add ASan and UBSan for Debug builds
-# )

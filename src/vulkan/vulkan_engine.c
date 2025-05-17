@@ -2,12 +2,13 @@
   vulkan_engine.c
 */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vulkan/vulkan_core.h>
 
-#include "SDL3/SDL_error.h"
-#include "SDL3/SDL_vulkan.h"
+#include <SDL3/SDL_error.h>
+#include <SDL3/SDL_vulkan.h>
 
 #include "version.h"
 #include "logger.h"
@@ -18,14 +19,11 @@
 #define HEIGHT 1080
 #define WIDTH  1920
 
-// Validation layers need to be enabled by specifying their name. All of the useful standard validation are bundled into
-// a layer included in the SDK that is known as VK_LAYER_KHRONOS_validation.
-static const uint32_t validation_layers_count = 1;
-static const char* const validation_layers[1] = {"VK_LAYER_KHRONOS_validation"};
-
 // Swapchain support is not part of the Vulkan core. We need to enable the VK_KHR_swapchain device extension.
 static const uint32_t device_extensions_count = 1;
 static const char* const device_extensions[1] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
+static const uint32_t instance_layers_count = 0;
 
 #ifdef NDEBUG
 static const bool enable_validation_layers = false;
@@ -36,21 +34,21 @@ static const bool enable_validation_layers = true;
 /**
  * Struct for holding the graphics queue family index and the present queue family index.
  */
-typedef struct queue_family_indices {
+typedef struct queue_family_indices_s {
     uint32_t graphics_family;
     uint32_t present_family;
-} queue_family_indices;
+} queue_family_indices_t;
 
 /**
  * Struct used for finding the swapchain support details.
  */
-typedef struct swapchain_support_details {
+typedef struct swapchain_support_details_s {
     VkSurfaceCapabilitiesKHR capabilities;
     VkSurfaceFormatKHR* formats;
     size_t formats_count;
     VkPresentModeKHR* present_modes;
     size_t present_modes_count;
-} swapchain_support_details;
+} swapchain_support_details_t;
 
 /**
  * Create a vulkan instance.
@@ -59,35 +57,39 @@ typedef struct swapchain_support_details {
  *
  * \return True if successful, false if failed.
  */
-static bool create_instance(vulkan_engine* p_engine);
+static bool create_instance(vulkan_engine_t* p_engine);
 
 /**
- * Check validation layer support. Checks if all layers in the validation_layers array are available, this is done by
- * comparing validation_layers to the array of layers given by vkEnumerateInstanceLayerProperties. This function is
- * meant to only be called if enable_validation_layers = true, which is only the case in the debug build.
+ * Aquire the required instance layers. If enable_validation_layer = true, will add "VK_LAYER_KHRONOS_validation" to
+ * the returned array. The returned array of required instance extensions is allocated
+ * using malloc and must be freed using free.
  *
- * \return True if successful, false if failed.
+ * \param[in, out] p_required_layers_count The number of required layers.
+ *
+ * \return A pointer to a dynamically allocated array of strings listing the required layers.
+ *
+ * \note The currently only required layer is the validation layers if they are enabled, else there are none.
  */
-static bool check_validation_layer_support(void);
+static const char** get_required_layers(uint32_t* p_required_layers_count);
 
 /**
- * Aquire the required instance extensions needed of rvkCreateInstance, this is queried using
+ * Aquire the required instance extensions needed of vkCreateInstance, this is queried using
  * SDL_Vulkan_GetInstanceExtensions. If enable_validation_layer = true, will add VK_EXT_DEBUG_UTILS_EXTENSION_NAME to
  * the returned array of required instance extensions. The returned array of required instance extensions is allocated
- * using SDL_malloc and must be freed using SDL_free.
+ * using malloc and must be freed using free.
  *
  * \param[in, out] p_required_extensions_count The number of required extensions.
  *
- * \return A pointer to a dynamically allocated array of strings (const char *).
+ * \return A pointer to a dynamically allocated array of strings listing the required extensions.
  */
-static const char* const* get_required_extensions(uint32_t* p_required_extensions_count);
+static const char** get_required_extensions(uint32_t* p_required_extensions_count);
 
 /**
  * Populate the VkDebugUtilsMessengerCreateInfoEXT struct.
  *
  * \param[in, out] p_create_info Pointer to the VkDebugUtilsMessengerCreateInfoEXT to populate.
  */
-static void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* p_create_info);
+static void get_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* p_create_info);
 
 /**
  * A callback function to be used by the vulkan validation layers.
@@ -102,10 +104,10 @@ static void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfo
  *
  * \return VK_FALSE.
  */
-VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT /*message_severity*/,
-                                              VkDebugUtilsMessageTypeFlagsEXT /*message_type*/,
+VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+                                              VkDebugUtilsMessageTypeFlagsEXT message_type,
                                               const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
-                                              void* /*p_user_data*/);
+                                              void* p_user_data);
 
 /**
  * vkDestroyInstance wrapper to be used in the deletion_queue.
@@ -124,7 +126,7 @@ static void vkDestroyInstance_wrapper(void* p_vulkan_instance);
  *
  * \return True if successful, false if failed.
  */
-static bool setup_debug_messenger(vulkan_engine* p_engine);
+static bool setup_debug_messenger(vulkan_engine_t* p_engine);
 
 /**
  * Proxy function for vkCreateDebugUtilsMessengerEXT.
@@ -163,7 +165,7 @@ static void vkDestroySurfaceKHR_wrapper(void* p_engine);
  *
  * \return True if successful, false if failed.
  */
-static bool pick_physical_device(vulkan_engine* p_engine);
+static bool pick_physical_device(vulkan_engine_t* p_engine);
 
 /**
  * Check if a physical device is suitable for the application. It checks if the required device extensions are
@@ -175,7 +177,7 @@ static bool pick_physical_device(vulkan_engine* p_engine);
  *
  * \return True if the device is suitable, false if it is not.
  */
-static bool is_device_suitable(vulkan_engine* p_engine, VkPhysicalDevice device);
+static bool is_device_suitable(vulkan_engine_t* p_engine, VkPhysicalDevice device);
 
 /**
  * Check for and fetches the graphics queue family index and the present queue family index and stores them in a
@@ -187,7 +189,8 @@ static bool is_device_suitable(vulkan_engine* p_engine, VkPhysicalDevice device)
  *
  * \return True if both a grapics queue family and a present queue family was found.
  */
-static bool find_queue_families(vulkan_engine* p_engine, VkPhysicalDevice device, queue_family_indices* q_fam_indices);
+static bool find_queue_families(vulkan_engine_t* p_engine, VkPhysicalDevice device,
+                                queue_family_indices_t* q_fam_indices);
 
 /**
  * Check that the device has support for the device extensions listed in device_extensions (which is currently just
@@ -211,8 +214,8 @@ static bool check_device_extension_support(VkPhysicalDevice device);
  *
  * \return True if the swapchain has support, false if not.
  */
-static bool query_swapchain_support(vulkan_engine* p_engine, VkPhysicalDevice device,
-                                    swapchain_support_details* swapchain_support);
+static bool query_swapchain_support(vulkan_engine_t* p_engine, VkPhysicalDevice device,
+                                    swapchain_support_details_t* swapchain_support);
 
 /**
  * free wrapper for use in deletion queue.
@@ -228,7 +231,7 @@ static void free_wrapper(void* mem);
  *
  * \return True if successful, false if failed.
  */
-static bool create_logical_device(vulkan_engine* p_engine);
+static bool create_logical_device(vulkan_engine_t* p_engine);
 
 /**
  * vkDestroyDevice wrapper for use in deletion queue
@@ -242,7 +245,7 @@ static void vkDestroyDevice_wrapper(void* p_resource);
  *
  * \param[in] p_engine Pointer to the vulkan_engine.
  */
-static bool create_swapchain(vulkan_engine* p_engine);
+static bool create_swapchain(vulkan_engine_t* p_engine);
 
 /**
  * Choose the swapchain surface format.
@@ -275,7 +278,7 @@ static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR* p_presen
  *
  * \return The chosen swapchain extent. If the SDL_GetWindowSizeInPixels the extent will have 0 width and height.
  */
-static VkExtent2D choose_swapchain_extent(vulkan_engine* p_engine, VkSurfaceCapabilitiesKHR capabilities);
+static VkExtent2D choose_swapchain_extent(vulkan_engine_t* p_engine, VkSurfaceCapabilitiesKHR capabilities);
 
 /**
  * vkDestroySwapchainKHR for use in deletion queue.
@@ -291,7 +294,7 @@ static void vkDestroySwapchainKHR_wrapper(void* p_engine);
  *
  * \return True if all image views were successfully created, false otherwise.
  */
-static bool create_image_views(vulkan_engine* p_engine);
+static bool create_image_views(vulkan_engine_t* p_engine);
 
 /**
  * Create and image view for an image.
@@ -306,7 +309,7 @@ static bool create_image_views(vulkan_engine* p_engine);
 static VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags,
                                      uint32_t mip_levels);
 
-bool vulkan_engine_init(vulkan_engine* p_engine) {
+bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     // Check if p_engine is NULL
     if(p_engine == NULL) {
         LOG_ERROR("vulkan_engine_init: p_engine is NULL");
@@ -319,53 +322,56 @@ bool vulkan_engine_init(vulkan_engine* p_engine) {
 
     // Allocate main deletion queue
     p_engine->p_main_delq = deletion_queue_alloc();
+    // This NULL check is technically unnecessary since it is also performed inside deletion_queue_alloc
     if(p_engine->p_main_delq == NULL) {
-        LOG_ERROR("Failed to initialize vulkan engine");
+        LOG_ERROR("Vulkan engine deletion queue is NULL after allocation");
         return false;
     }
 
     // Initialize SDL
     if(!init_SDL_backend(p_engine)) {
-        LOG_ERROR("Failed to initialize vulkan engine");
+        LOG_ERROR("Failed to initialize SDL backend");
         return false;
     }
 
     // Create vulkan instance
     if(!create_instance(p_engine)) {
-        LOG_ERROR("Failed to initialize vulkan engine");
+        LOG_ERROR("Failed to create vulkan instance");
         return false;
     }
 
     // Setup debug messenger
     if(!setup_debug_messenger(p_engine)) {
-        LOG_ERROR("Failed to initialize vulkan engine");
+        LOG_ERROR("Failed to setup debug messenger");
         return false;
     }
 
     // Create SDL window surface
     if(!SDL_Vulkan_CreateSurface(p_engine->p_SDL_window, p_engine->instance, VK_NULL_HANDLE, &p_engine->surface)) {
         LOG_ERROR("Failed to create vulkan rendering surface: %s", SDL_GetError());
-        LOG_ERROR("Failed to initialize vulkan engine");
         return false;
     }
     LOG_INFO("Vulkan rendering surface created");
-    deletion_queue_queue(p_engine->p_main_delq, (void*)p_engine, vkDestroySurfaceKHR_wrapper);
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroySurfaceKHR_wrapper)) {
+        LOG_ERROR("Failed to queue deletion node");
+        return false;
+    }
 
     // Pick a physical device (GPU)
     if(!pick_physical_device(p_engine)) {
-        LOG_ERROR("Failed to initialize vulkan engine");
+        LOG_ERROR("Failed to find suitible physical device");
         return false;
     }
 
     // Create logical device and get queue families
     if(!create_logical_device(p_engine)) {
-        LOG_ERROR("Failed to initialize vulkan engine");
+        LOG_ERROR("Failed to create logical device");
         return false;
     }
 
     // Create swapchain
     if(!create_swapchain(p_engine)) {
-        LOG_ERROR("Failed to initialize vulkan engine");
+        LOG_ERROR("Failed to create swapchain");
         return false;
     }
 
@@ -390,7 +396,7 @@ bool vulkan_engine_init(vulkan_engine* p_engine) {
     return true;
 }
 
-bool vulkan_engine_destroy(vulkan_engine* p_engine) {
+bool vulkan_engine_destroy(vulkan_engine_t* p_engine) {
     // Check if p_engine is NULL
     if(p_engine == NULL) {
         LOG_ERROR("vulkan_engine_destroy: p_engine is NULL");
@@ -409,79 +415,96 @@ bool vulkan_engine_destroy(vulkan_engine* p_engine) {
         return false;
     }
 
+    // Vulkan engine successfully destroyed
     LOG_INFO("Vulkan engine destroyed");
     return true;
 }
 
-static bool create_instance(vulkan_engine* p_engine) {
+static bool create_instance(vulkan_engine_t* p_engine) {
     // Check if p_engine is NULL
     if(p_engine == NULL) {
         LOG_ERROR("create_instance: p_engine is NULL");
         return false;
     }
 
-    // Checks if all of the requested layers are available.
-    if(enable_validation_layers && !check_validation_layer_support()) {
-        LOG_ERROR("Validation layers requested but not available. Requesting validation layers when not avaiable is "
-                  "currently not supported\n");
-        return false;
-    }
+    // If validation layers are enabled, check if they are suuported
+    // if(enable_validation_layers && !check_validation_layer_support()) {
+    //     LOG_ERROR("Validation layers requested but not available. Requesting validation layers when not avaiable is "
+    //               "currently not supported\n");
+    //     return false;
+    // }
 
-    // Retrieve a list of supported extensions before creating an instance.
-    // Request just the number of extensions.
-    uint32_t extension_count = 0;
-    vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &extension_count, VK_NULL_HANDLE);
-    VkExtensionProperties* extensions = (VkExtensionProperties*)malloc(extension_count * sizeof(VkExtensionProperties));
-
-    // Query the extension details.
-    vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &extension_count, extensions);
-
-    LOG_DEBUG("Available extensions:");
-    for(uint32_t i = 0; i < extension_count; ++i) {
-        LOG_DEBUG("%s", extensions[i].extensionName);
-    }
-    // Free extensions array
-    free(extensions);
-
+    // Create application info
     VkApplicationInfo app_info = {0};
-    app_info.sType             = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pApplicationName  = "Breakanoid";
-    app_info.applicationVersion =
-        VK_MAKE_VERSION(breakanoid_VERSION_MAJOR, breakanoid_VERSION_MINOR, breakanoid_VERSION_PATCH);
-    app_info.pEngineName   = "No Engine";
-    app_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
-    app_info.apiVersion    = VK_API_VERSION_1_0;
+    // get_app_info(&app_indo);
 
+    app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pApplicationName   = "Breakanoid";
+    app_info.applicationVersion = VK_MAKE_VERSION(break_VERSION_MAJOR, break_VERSION_MINOR, break_VERSION_PATCH);
+    app_info.pEngineName        = "No Engine";
+    app_info.engineVersion      = VK_MAKE_VERSION(0, 1, 0);
+    app_info.apiVersion         = VK_API_VERSION_1_3;
+
+    // Create instance create info
     VkInstanceCreateInfo create_inst_info = {0};
     create_inst_info.sType                = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_inst_info.pApplicationInfo     = &app_info;
 
+    uint32_t required_layers_count     = 0;
     uint32_t required_extensions_count = 0;
-    const char* const* req_extensions  = get_required_extensions(&required_extensions_count);
-    // createInfo.enabledExtensionCount        = static_cast<uint32_t>(reqExtensions.size());
+
+    // Query required instance layers
+    const char** required_layers         = get_required_layers(&required_layers_count);
+    create_inst_info.enabledLayerCount   = required_layers_count;
+    create_inst_info.ppEnabledLayerNames = (const char* const*)required_layers;
+
+    // Query required instance extensions (From SDL_Vulkan_GetInstanceExtensions)
+    const char** required_extensions         = get_required_extensions(&required_extensions_count);
     create_inst_info.enabledExtensionCount   = required_extensions_count;
-    create_inst_info.ppEnabledExtensionNames = req_extensions;
+    create_inst_info.ppEnabledExtensionNames = (const char* const*)required_extensions;
 
-    VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};
+    VkDebugUtilsMessengerCreateInfoEXT debug_create_info    = {0};
+    VkLayerSettingsCreateInfoEXT layer_settings_create_info = {0};
 
-    // Include validation layer names if they are enabled.
+    // Enable non-default validation layer settings
+    const VkBool32 setting_validate_sync           = VK_TRUE;
+    const VkBool32 setting_validate_best_practices = VK_TRUE;
+    const VkBool32 setting_enable_message_limit    = VK_TRUE;
+    const int32_t setting_duplicate_message_limit  = 3;
+
     if(enable_validation_layers) {
-        create_inst_info.enabledLayerCount   = validation_layers_count;
-        create_inst_info.ppEnabledLayerNames = validation_layers;
-        for(uint32_t i = 0; i < validation_layers_count; ++i)
-            LOG_DEBUG("validation_layers: i = %d %s", i, validation_layers[i]);
+        const VkLayerSettingEXT settings[] = {{"VK_LAYER_KHRONOS_validation", "validate_sync",
+                                               VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_validate_sync},
+                                              {"VK_LAYER_KHRONOS_validation", "validate_best_practices",
+                                               VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_validate_best_practices},
+                                              {"VK_LAYER_KHRONOS_validation", "enable_message_limit",
+                                               VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_enable_message_limit},
+                                              {"VK_LAYER_KHRONOS_validation", "duplicate_message_limit",
+                                               VK_LAYER_SETTING_TYPE_INT32_EXT, 1, &setting_duplicate_message_limit}};
 
-        populate_debug_messenger_create_info(&debug_create_info);
-        create_inst_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
+        layer_settings_create_info.sType        = VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT;
+        layer_settings_create_info.settingCount = 2;
+        layer_settings_create_info.pSettings    = settings;
 
-        // FUTURE: send in validation features struct to enable specific validation features.
-        // VkValidationFeaturesEXT val_feat = {0};
-        // val_feat.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+        // Populate debug messenger create info
+        get_debug_messenger_create_info(&debug_create_info);
 
-    } else {
-        create_inst_info.enabledLayerCount = 0;
-        create_inst_info.pNext             = VK_NULL_HANDLE;
+        // The current order of the pNext chain of extenion structs is
+        //      instance -> debug_utils -> layer_settings
+        //
+        // The order of the pNext chain should not matter. However, using the reverse order:
+        //      instance -> layer_settings -> debug_utils
+        //
+        // causes the validation layers to issue warnings that seem incorrect.
+
+        // Extend InstanceCreateInfo struct with LayerSettignsCreateInfo struct
+        create_inst_info.pNext = &debug_create_info;
+
+        // Extend LayerSettignsCreateInfo struct with DebugUtilsMessengerCreateInfo struct
+        layer_settings_create_info.pNext = &layer_settings_create_info;
     }
+
+    uint32_t req_inst_layers_count = 0;
 
     // Create instance.
     if(vkCreateInstance(&create_inst_info, VK_NULL_HANDLE, &p_engine->instance) != VK_SUCCESS) {
@@ -490,99 +513,220 @@ static bool create_instance(vulkan_engine* p_engine) {
         return false;
     }
     LOG_INFO("Vulkan instance created");
-    deletion_queue_queue(p_engine->p_main_delq, (void*)(&p_engine->instance), vkDestroyInstance_wrapper);
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyInstance_wrapper)) {
+        // Handle deletion queue error
+        LOG_ERROR("Failed to queue deletion queue");
+        vkDestroyInstance_wrapper(p_engine);
+        return false;
+    }
 
-    // Need to handle this better, this is dynamically allocated in getRequiredExtensions and must be freed after
-    // instance creationp
-    SDL_free((void*)req_extensions); // NOLINT
+    // Free dynamically allocated arrays
+    free(required_layers); // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+    required_layers = NULL;
+    free(required_extensions); // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+    required_extensions = NULL;
 
     return true;
 }
 
-static bool check_validation_layer_support(void) {
-    uint32_t available_layers_count = 0;
-    // Query number of available layers.
-    vkEnumerateInstanceLayerProperties(&available_layers_count, VK_NULL_HANDLE);
+static const char** get_required_layers(uint32_t* p_required_instance_layers_count) {
+    // Since the only instance layers we are currently requiring are the validation layers (if they are enabled) the
+    // first thing we do is check if validaiton layers are enabled, if not then we return NULL. The design of this
+    // function is supposed to mimic that of get_required_extensions.
 
-    // Query available layers
+    *p_required_instance_layers_count = 0;
+
+    // Query number of available instance layers.
+    uint32_t available_layers_count = 0;
+    if(vkEnumerateInstanceLayerProperties(&available_layers_count, VK_NULL_HANDLE) != VK_SUCCESS) {
+        // Handle vkEnumerateInstanceLayerProperties error
+        LOG_ERROR("Failed to query number of available instance layers");
+        return NULL;
+    }
+
+    // Allocate array of VkLayerProperties with size available_layers_count
     VkLayerProperties* available_layers =
         (VkLayerProperties*)malloc(available_layers_count * sizeof(VkLayerProperties));
+    if(available_layers == NULL) {
+        LOG_ERROR("Failed to allocate memory of size %lu: %s", available_layers_count * sizeof(VkLayerProperties),
+                  strerror(errno));
+        return NULL;
+    }
+
+    // Query available instance layers
     vkEnumerateInstanceLayerProperties(&available_layers_count, available_layers);
 
-    LOG_DEBUG("Available layers:");
-    for(uint32_t i = 0; i < available_layers_count; ++i)
-        LOG_DEBUG("%s", available_layers[i].layerName);
+#ifndef NDEBUG
+    // List avaiable instance layers
+    LOG_DEBUG("Available instance layers:");
+    for(uint32_t i = 0; i < available_layers_count; ++i) {
+        LOG_DEBUG("    %s", available_layers[i].layerName);
+    }
+#endif
 
-    // Check if all of the layers in validationLayers exist in the availableLayers list.
-    for(uint32_t i = 0; i < validation_layers_count; ++i) {
+    uint32_t allocated_layers_count = instance_layers_count;
+    if(enable_validation_layers) {
+        ++allocated_layers_count;
+    } else {
+        return NULL;
+    }
+
+    // Allocate memory for the extensions array
+    const char** layers = (const char**)malloc(allocated_layers_count * sizeof(char*));
+    if(layers == NULL) {
+        // Handle memory allocation failure
+        LOG_ERROR("Failed to allocate array of size %lu: %s", allocated_layers_count * sizeof(char*), strerror(errno));
+        return NULL;
+    }
+
+    // Add validation layers if they are enabled
+    if(enable_validation_layers) {
+        layers[allocated_layers_count - 1] = "VK_LAYER_KHRONOS_validation";
+    }
+
+#ifndef NDEBUG
+    // List required instance extensions
+    LOG_DEBUG("Required instance layers:");
+    for(uint32_t i = 0; i < allocated_layers_count; ++i) {
+        LOG_DEBUG("    %s", layers[i]);
+    }
+#endif
+
+    // Check if all of the layers in validation_layers exist in the available_layers list.
+    for(uint32_t i = 0; i < allocated_layers_count; ++i) {
         bool layer_found = false;
         for(uint32_t j = 0; j < available_layers_count; ++j) {
-            if(strcmp(validation_layers[i], available_layers[j].layerName) == 0) {
+            if(strcmp(layers[i], available_layers[j].layerName) == 0) {
                 layer_found = true;
                 break;
             }
         }
         if(!layer_found) {
-            return false;
+            LOG_ERROR("Instance layer: %s, is not available", layers[i]);
+            return NULL;
         }
     }
 
+    // Free allocated VkLayerProperties array
     free(available_layers);
-    return true;
+    available_layers = NULL;
+
+    // Set the layers count
+    *p_required_instance_layers_count = allocated_layers_count;
+
+    // Return the layer array as immutable (const char* const*)
+    // NOTE: THIS ARRAY IS ALLOCATED ON THE HEAP AND MUST BE FREED
+    return layers;
 }
 
-static const char* const* get_required_extensions(uint32_t* p_required_extensions_count) {
-    // Specify the desired global extensions.
-    uint32_t count_instance_extensions = 0;
+static const char** get_required_extensions(uint32_t* p_required_extensions_count) {
+    *p_required_extensions_count = 0;
 
-    // https://wiki.libsdl.org/SDL3/SDL_Vulkan_GetInstanceExtensions
-    // Query the instance extensions from SDL
-    const char* const* instance_extensions = SDL_Vulkan_GetInstanceExtensions(&count_instance_extensions);
-    if(instance_extensions == NULL) {
-        // Handle failure to query instance extensions
-        *p_required_extensions_count = 0;
+    // Query number of available instance extensions
+    uint32_t available_extensions_count = 0;
+    vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &available_extensions_count, VK_NULL_HANDLE);
+
+    // Allocate array of VkExtensionProperties with size available_extension_count
+    VkExtensionProperties* available_extensions =
+        (VkExtensionProperties*)malloc(available_extensions_count * sizeof(VkExtensionProperties));
+    if(available_extensions == NULL) {
+        LOG_ERROR("Failed to allocate memory of size %lu: %s",
+                  available_extensions_count * sizeof(VkExtensionProperties), strerror(errno));
         return NULL;
     }
 
-    // Calculate the total number of required extensions
-    uint32_t count_extensions = count_instance_extensions;
+    // Query available instance extensions
+    vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &available_extensions_count, available_extensions);
+
+#ifndef NDEBUG
+    // List available instance extension names
+    LOG_DEBUG("Available instance extensions:");
+    for(uint32_t i = 0; i < available_extensions_count; ++i) {
+        LOG_DEBUG("    %s", available_extensions[i].extensionName);
+    }
+#endif
+
+    uint32_t SDL_extensions_count = 0;
+
+    // https://wiki.libsdl.org/SDL3/SDL_Vulkan_GetInstanceExtensions
+    // Query the required instance extensions from SDL
+    const char* const* SDL_extensions = SDL_Vulkan_GetInstanceExtensions(&SDL_extensions_count);
+    if(SDL_extensions == NULL) {
+        // Handle failure to query required instance extensions from SDl
+        LOG_ERROR("Failed to query the required instance extensions from SDL: %s", SDL_GetError());
+        return NULL;
+    }
+
+    // If validation layers are enabled, increase the extensions count by 1
+    uint32_t allocated_extensions_count = SDL_extensions_count;
     if(enable_validation_layers) {
-        ++count_extensions; // Include validation layer extension
+        ++allocated_extensions_count;
     }
 
     // Allocate memory for the extensions array
-    char** extensions = (char**)SDL_malloc(count_extensions * sizeof(char*));
+    const char** extensions = (const char**)malloc(allocated_extensions_count * sizeof(char*));
     if(extensions == NULL) {
         // Handle memory allocation failure
-        *p_required_extensions_count = 0;
+        LOG_ERROR("Failed to allocate array of size %lu: %s", allocated_extensions_count * sizeof(char*),
+                  strerror(errno));
         return NULL;
     }
 
     // Copy instance extensions into the allocated array
-    memcpy((void*)extensions, (const void*)instance_extensions, count_instance_extensions * sizeof(char*));
+    // NOLINTNEXTLINE(bugprone-multi-level-implicit-pointer-conversion)
+    memcpy(extensions, SDL_extensions, SDL_extensions_count * sizeof(char*));
 
-    // Add validation layer extension if enabled
+    // Add debug utils extension if validation layers are enabled
     if(enable_validation_layers) {
-        extensions[count_extensions - 1] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME; // NOLINT
+        extensions[allocated_extensions_count - 1] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
     }
 
-    // Set the extenion count
-    *p_required_extensions_count = count_extensions;
+#ifndef NDEBUG
+    // List required instance extensions
+    LOG_DEBUG("Required instance extensions:");
+    for(uint32_t i = 0; i < allocated_extensions_count; ++i) {
+        LOG_DEBUG("    %s", extensions[i]);
+    }
+#endif
+
+    // Check if all of the extensions in the available_extensions array exist.
+    for(uint32_t i = 0; i < allocated_extensions_count; ++i) {
+        bool extension_found = false;
+        for(uint32_t j = 0; j < available_extensions_count; ++j) {
+            if(strcmp(extensions[i], available_extensions[j].extensionName) == 0) {
+                extension_found = true;
+                break;
+            }
+        }
+        if(!extension_found) {
+            LOG_ERROR("Instance extension: %s, is not available", extensions[i]);
+            return NULL;
+        }
+    }
+
+    // Free allocated extensions array
+    free(available_extensions);
+    available_extensions = NULL;
+
+    // Set the extension count
+    *p_required_extensions_count = allocated_extensions_count;
 
     // Return the extensions array as immutable (const char* const*)
-    return (const char* const*)extensions;
+    // NOTE: THIS ARRAY IS ALLOCATED ON THE HEAP AND MUST BE FREED
+    return extensions;
 }
 
-static void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* p_create_info) {
-    p_create_info->sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    p_create_info->messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-                                     VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                                     VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+static void get_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* p_create_info) {
+    p_create_info->sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    p_create_info->messageSeverity =
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     p_create_info->messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                                  VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                  VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     p_create_info->pfnUserCallback = debug_callback;
     p_create_info->pUserData       = VK_NULL_HANDLE;
+    p_create_info->pNext           = VK_NULL_HANDLE;
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
@@ -620,39 +764,43 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBit
     // Finally, the pUserData parameter contains a pointer that was specified during the setup of the callback and
     // allows you to pass your own data to it.
 
-    log_level level = LOG_ERROR;
+    int level = LOG_LEVEL_TRACE;
     if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-        level = LOG_ERROR;
+        level = LOG_LEVEL_ERROR;
     } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-        level = LOG_WARN;
-    } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-        level = LOG_INFO;
+        level = LOG_LEVEL_WARN;
+        // } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+        //     level = LOG_LEVEL_INFO;
     } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
-        level = LOG_DEBUG;
+        level = LOG_LEVEL_DEBUG;
     } else {
-        // This should never occur because the above message severities are the only ones avaiable, but i have added
-        // this final else just in case.
-        level = LOG_DEBUG;
+        return VK_FALSE;
     }
 
     logger__msg(level, NULL, 0, "validation layer: %s", p_callback_data->pMessage);
     return VK_FALSE;
 }
 
-static void vkDestroyInstance_wrapper(void* p_vulkan_instance) {
+static void vkDestroyInstance_wrapper(void* p_engine) {
     LOG_DEBUG("Callback: vkDestroyInstance_wrapper");
-    vkDestroyInstance(*((VkInstance*)p_vulkan_instance), VK_NULL_HANDLE);
+    vkDestroyInstance(((vulkan_engine_t*)p_engine)->instance, VK_NULL_HANDLE);
 }
 
-static bool setup_debug_messenger(vulkan_engine* p_engine) {
+static bool setup_debug_messenger(vulkan_engine_t* p_engine) {
+    if(p_engine == NULL) {
+        LOG_ERROR("setup_debug_messenger: p_engine is NULL");
+        return false;
+    }
+
     // No debug messenger if validation layers are not enabled
     if(!enable_validation_layers) {
         p_engine->debug_messenger = VK_NULL_HANDLE;
         return true;
     }
+
     // Fill struct with details about the messenger and its callback.
     VkDebugUtilsMessengerCreateInfoEXT create_info = {0};
-    populate_debug_messenger_create_info(&create_info);
+    get_debug_messenger_create_info(&create_info);
 
     // This struct should be passed to the vkCreateDebugUtilsMessengerEXT function to create the
     // VkDebugUtilsMessengerEXT object. Unfortunately, because this function is an extension function, it is not
@@ -665,7 +813,7 @@ static bool setup_debug_messenger(vulkan_engine* p_engine) {
         LOG_WARN("Failed to create debug messenger");
 
         // Set the debug messenger to NULL if failed to be created
-        p_engine->debug_messenger = VK_NULL_HANDLE;
+        p_engine->debug_messenger = NULL;
         return true;
     }
     LOG_INFO("Debug messenger created");
@@ -673,7 +821,14 @@ static bool setup_debug_messenger(vulkan_engine* p_engine) {
     // The VkDebugUtilsMessengerEXT object also needs to be cleaned up with a call to
     // vkDestroyDebugUtilsMessengerEXT, which we also need to aquire via a proxy function.
     // We call the detroyer in cleanup.
-    deletion_queue_queue(p_engine->p_main_delq, p_engine, DestroyDebugUtilsMessengerEXT_wrapper);
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, DestroyDebugUtilsMessengerEXT_wrapper)) {
+        // Handle deletion queue error
+        LOG_ERROR("Failed to queue deletion node");
+        DestroyDebugUtilsMessengerEXT_wrapper(p_engine);
+        return false;
+    }
+
+    LOG_INFO("Debug messenger successfully setup");
     return true;
 }
 
@@ -705,19 +860,23 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
     }
 }
 
-static void DestroyDebugUtilsMessengerEXT_wrapper(void* p_vulkan_engine) {
+static void DestroyDebugUtilsMessengerEXT_wrapper(void* p_engine) {
     LOG_DEBUG("Callback: DestroyDebugUtilsMessengerEXT_wrapper");
-    DestroyDebugUtilsMessengerEXT(((vulkan_engine*)p_vulkan_engine)->instance,
-                                  ((vulkan_engine*)p_vulkan_engine)->debug_messenger, VK_NULL_HANDLE);
+    DestroyDebugUtilsMessengerEXT(((vulkan_engine_t*)p_engine)->instance, ((vulkan_engine_t*)p_engine)->debug_messenger,
+                                  VK_NULL_HANDLE);
 }
 
-static void vkDestroySurfaceKHR_wrapper(void* p_resource) {
+static void vkDestroySurfaceKHR_wrapper(void* p_engine) {
     LOG_DEBUG("Callback: vkDestroySurfaceKHR_wrapper");
-    vulkan_engine* p_engine = (vulkan_engine*)p_resource;
-    vkDestroySurfaceKHR(p_engine->instance, p_engine->surface, VK_NULL_HANDLE);
+    vkDestroySurfaceKHR(((vulkan_engine_t*)p_engine)->instance, ((vulkan_engine_t*)p_engine)->surface, VK_NULL_HANDLE);
 }
 
-static bool pick_physical_device(vulkan_engine* p_engine) {
+static bool pick_physical_device(vulkan_engine_t* p_engine) {
+    if(p_engine == NULL) {
+        LOG_ERROR("pick_physical_device: p_engine is NULL");
+        return false;
+    }
+
     uint32_t device_count = 0;
 
     // Get number of devices with Vulkan support
@@ -732,7 +891,7 @@ static bool pick_physical_device(vulkan_engine* p_engine) {
     // Allocate array holding all supported devices
     VkPhysicalDevice* devices = (VkPhysicalDevice*)malloc(device_count * sizeof(VkPhysicalDevice));
     vkEnumeratePhysicalDevices(p_engine->instance, &device_count, devices);
-
+    
     // Check for suitable device in devices
     LOG_DEBUG("Looking for suitable devices:");
     for(uint32_t i = 0; i < device_count; ++i) {
@@ -753,11 +912,19 @@ static bool pick_physical_device(vulkan_engine* p_engine) {
         return false;
     }
     LOG_DEBUG("MSAA samples: %d", p_engine->msaa_samples);
-    LOG_INFO("Physical device picked: %s", "Temp, replace with physical device name and ID");
     return true;
 }
 
-static bool is_device_suitable(vulkan_engine* p_engine, VkPhysicalDevice device) {
+static bool is_device_suitable(vulkan_engine_t* p_engine, VkPhysicalDevice device) {
+    if(p_engine == NULL) {
+        LOG_ERROR("is_device_suitable: p_engine is NULL");
+        return false;
+    }
+    if(device == NULL) {
+        LOG_ERROR("is_device_suitable: device is NULL");
+        return false;
+    }
+
     // Query basic device properties like name and supported Vulkan version
     VkPhysicalDeviceProperties device_properties;
     vkGetPhysicalDeviceProperties(device, &device_properties);
@@ -773,7 +940,7 @@ static bool is_device_suitable(vulkan_engine* p_engine, VkPhysicalDevice device)
               VK_API_VERSION_PATCH(device_properties.apiVersion));
 
     // Check if graphics and present queue families are supported by device
-    queue_family_indices q_fam_indices = {0};
+    queue_family_indices_t q_fam_indices = {0};
     if(!find_queue_families(p_engine, device, &q_fam_indices)) {
         LOG_ERROR("Required queue families not supported by device: %s", device_properties.deviceName);
         return false;
@@ -785,7 +952,7 @@ static bool is_device_suitable(vulkan_engine* p_engine, VkPhysicalDevice device)
         return false;
     }
 
-    swapchain_support_details swapchain_support = {0};
+    swapchain_support_details_t swapchain_support = {0};
     bool swapchain_adequate                     = query_swapchain_support(p_engine, device, &swapchain_support);
     // Swap chain support is sufficient for this tutorial if there is at least one supported image format and
     // one supported presentation mode given the window surface we have.
@@ -800,6 +967,7 @@ static bool is_device_suitable(vulkan_engine* p_engine, VkPhysicalDevice device)
     vkGetPhysicalDeviceFeatures(device, &supported_features);
 
     if(swapchain_adequate && supported_features.samplerAnisotropy) {
+        LOG_INFO("Physical device picked: %s", device_properties.deviceName);
         return true;
     } else {
         if(!swapchain_adequate) {
@@ -813,7 +981,8 @@ static bool is_device_suitable(vulkan_engine* p_engine, VkPhysicalDevice device)
     }
 }
 
-static bool find_queue_families(vulkan_engine* p_engine, VkPhysicalDevice device, queue_family_indices* q_fam_indices) {
+static bool find_queue_families(vulkan_engine_t* p_engine, VkPhysicalDevice device,
+                                queue_family_indices_t* q_fam_indices) {
     // It has been briefly touched upon before that almost every operation in Vulkan, anything from drawing to
     // uploading textures, requires commands to be submitted to a queue. There are different types of queues that
     // originate from different queue families and each family of queues allows only a subset of commands. For
@@ -881,8 +1050,8 @@ static bool check_device_extension_support(VkPhysicalDevice device) {
     return true;
 }
 
-static bool query_swapchain_support(vulkan_engine* p_engine, VkPhysicalDevice device,
-                                    swapchain_support_details* p_details) {
+static bool query_swapchain_support(vulkan_engine_t* p_engine, VkPhysicalDevice device,
+                                    swapchain_support_details_t* p_details) {
     // Just checking if a swap chain is available is not sufficient, because it may not actually be compatible with
     // our window surface. Creating a swap chain also involves a lot more settings than instance and device
     // creation, so we need to query for some more details before we’re able to proceed.
@@ -924,8 +1093,8 @@ static void free_wrapper(void* p_mem) {
     free(p_mem);
 }
 
-static bool create_logical_device(vulkan_engine* p_engine) {
-    queue_family_indices q_fam_indices = {0};
+static bool create_logical_device(vulkan_engine_t* p_engine) {
+    queue_family_indices_t q_fam_indices = {0};
     if(!find_queue_families(p_engine, p_engine->physical_device, &q_fam_indices)) {
         LOG_ERROR("Required queue families not supported by device: %s",
                   "Temp, replace with physical device name and ID");
@@ -980,7 +1149,7 @@ static bool create_logical_device(vulkan_engine* p_engine) {
         LOG_ERROR("Failed to create vulkan logical device");
         return false;
     }
-    LOG_INFO("Vulkan logcal device created");
+    LOG_INFO("Vulkan logical device created");
 
     deletion_queue_queue(p_engine->p_main_delq, (void*)p_engine, vkDestroyDevice_wrapper);
 
@@ -998,12 +1167,12 @@ static bool create_logical_device(vulkan_engine* p_engine) {
 
 static void vkDestroyDevice_wrapper(void* p_resource) {
     LOG_DEBUG("Callback: vkDestroyDevice_wrapper");
-    vulkan_engine* p_engine = (vulkan_engine*)p_resource;
+    vulkan_engine_t* p_engine = (vulkan_engine_t*)p_resource;
     vkDestroyDevice(p_engine->device, VK_NULL_HANDLE);
 }
 
-static bool create_swapchain(vulkan_engine* p_engine) {
-    swapchain_support_details swapchain_support = {0};
+static bool create_swapchain(vulkan_engine_t* p_engine) {
+    swapchain_support_details_t swapchain_support = {0};
     if(!query_swapchain_support(p_engine, p_engine->physical_device, &swapchain_support)) {
         // TODO: Move LOG_ERROR to inside query_swapchain_support
         LOG_ERROR("Swapchain not supported by device: %s", "Temp, replace with physical device name and ID");
@@ -1053,7 +1222,7 @@ static bool create_swapchain(vulkan_engine* p_engine) {
     // first to perform operations like post-processing. In that case you may use a value like
     // VK_IMAGE_USAGE_TRANSFER_DST_BIT instead and use a memory operation to transfer the rendered image to a swap
     // chain image.
-    queue_family_indices q_fam_indices = {0};
+    queue_family_indices_t q_fam_indices = {0};
     find_queue_families(p_engine, p_engine->physical_device, &q_fam_indices);
 
     uint32_t q_fam_indices_array[] = {q_fam_indices.graphics_family, q_fam_indices.present_family};
@@ -1115,13 +1284,16 @@ static bool create_swapchain(vulkan_engine* p_engine) {
 
     // These are allocated in query swapchain support and must be freed!!! not ideal solution.
     free(swapchain_support.formats);
+    swapchain_support.formats = NULL;
     free(swapchain_support.present_modes);
+    swapchain_support.present_modes = NULL;
     return true;
 }
 
 static void vkDestroySwapchainKHR_wrapper(void* p_engine) {
     LOG_DEBUG("Callback: vkDestroySwapchainKHR_wrapper");
-    vkDestroySwapchainKHR(((vulkan_engine*)p_engine)->device, ((vulkan_engine*)p_engine)->swapchain, VK_NULL_HANDLE);
+    vkDestroySwapchainKHR(((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->swapchain,
+                          VK_NULL_HANDLE);
 }
 
 static VkSurfaceFormatKHR choose_swapchain_surface_format(VkSurfaceFormatKHR* p_formats, size_t formats_count) {
@@ -1159,7 +1331,7 @@ static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR* p_presen
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-static VkExtent2D choose_swapchain_extent(vulkan_engine* p_engine, VkSurfaceCapabilitiesKHR capabilities) {
+static VkExtent2D choose_swapchain_extent(vulkan_engine_t* p_engine, VkSurfaceCapabilitiesKHR capabilities) {
     // The swap extent is the resolution of the swap chain images and it’s almost always exactly equal to the
     // resolution of the window that we’re drawing to in pixels (more on that in a moment). The range of the
     // possible resolutions is defined in the VkSurfaceCapabilitiesKHR structure. Vulkan tells us to match the
@@ -1208,7 +1380,7 @@ static VkExtent2D choose_swapchain_extent(vulkan_engine* p_engine, VkSurfaceCapa
     }
 }
 
-static bool create_image_views(vulkan_engine* p_engine) {
+static bool create_image_views(vulkan_engine_t* p_engine) {
     p_engine->swapchain_images.p_image_views =
         (VkImageView*)malloc(p_engine->swapchain_images.images_count * sizeof(VkImageView));
     deletion_queue_queue(p_engine->p_main_delq, (void*)p_engine->swapchain_images.p_image_views, free_wrapper);

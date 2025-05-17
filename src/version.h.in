@@ -7,10 +7,10 @@
 #pragma once
 
 // clang-format off
-#define breakanoid_VERSION_MAJOR @breakanoid_VERSION_MAJOR@
-#define breakanoid_VERSION_MINOR @breakanoid_VERSION_MINOR@
-#define breakanoid_VERSION_PATCH @breakanoid_VERSION_PATCH@
-#define breakanoid_VERSION       "@breakanoid_VERSION@"
+#define break_VERSION_MAJOR      @break_VERSION_MAJOR@
+#define break_VERSION_MINOR      @break_VERSION_MINOR@
+#define break_VERSION_PATCH      @break_VERSION_PATCH@
+#define break_VERSION            "@break_VERSION@"
 #define GIT_BRANCH               "@GIT_BRANCH@"
 #define GIT_COMMIT_HASH          "@GIT_COMMIT_HASH@"
 #define GIT_COMMIT_HASH_SHORT    "@GIT_COMMIT_HASH_SHORT@"

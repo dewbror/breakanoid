@@ -6,6 +6,8 @@
 #define SDL_BACKEND_H_
 #pragma once
 
+#include <stdbool.h>
+
 /**
  * Initiate the SDL "backend".
  *
@@ -13,5 +15,5 @@
  *
  * \return True if successful, false if failed.
  */
-bool init_SDL_backend(struct vulkan_engine* p_engine);
+bool init_SDL_backend(struct vulkan_engine_s* p_engine);
 #endif // SDL_BACKEND_H_
