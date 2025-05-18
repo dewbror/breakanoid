@@ -36,6 +36,7 @@ jobs:
     - name: Run tests
       run: |
         cd build_cicd
+        export CMOCKA_XML_FILE=cmocka_results.xml
         ./DebWithCov/break_tests
 
     - name: Generate coverage info
