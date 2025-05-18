@@ -39,6 +39,17 @@ jobs:
         export CMOCKA_XML_FILE=cmocka_results.xml
         ./DebWithCov/break_tests
 
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: Test Results
+        path: build_cicd/cmocka_results.xml
+    
+    - name: Publish Test Results
+      uses: mikepenz/action-junit-report@v4
+      with:
+        report_paths: '**/cmocka_results.xml'
+
     - name: Generate coverage info
       run: |
         lcov --capture --directory build_cicd --output-file coverage.info
