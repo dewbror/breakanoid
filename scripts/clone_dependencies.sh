@@ -2,10 +2,10 @@
 
 # List of repos to clone
 REPOS=(
-    "git@github.com:recp/cglm.git"
-    "git@github.com:nothings/stb.git"
-    "git@github.com:clibs/cmocka.git"
-    "git@github.com:libsdl-org/SDL.git"
+    "https://github.com/recp/cglm.git"
+    "https://github.com/nothings/stb.git"
+    "https://github.com/clibs/cmocka.git"
+    "https://github.com/libsdl-org/SDL.git"
 )
 
 REPO_TAGS=(
@@ -47,7 +47,7 @@ if [ "$SDL_ONLY" = true ] && [ "$SDL_OFF" = true ]; then
     echo "Error: Both SDL_ONLY and SDL_OFF cannot be specified simultaneously."
     exit 1
 elif [ "$SDL_ONLY" = true ]; then
-    REPOS=(git@github.com:libsdl-org/SDL.git)
+    REPOS=(https://github.com/libsdl-org/SDL.git)
     REPO_TAGS=(release-3.2.14)
 elif [ "$SDL_OFF" = true ]; then
     # Remove SDL from the REPOS array
