@@ -92,16 +92,30 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
         target_compile_options(break_lib PUBLIC
             -O0
             -ggdb3
+        )
+    elseif(CMAKE_BUILD_TYPE MATCHES "DebWithAsan")
+        target_compile_options(break_lib PUBLIC
+            -O0
+            -ggdb3
             -fsanitize=address,undefined
         )
         target_link_options(break_lib PUBLIC
             -fsanitize=address,undefined
         )
+    elseif(CMAKE_BUILD_TYPE MATCHES "DebWithCov")
+        target_compile_options(break_lib PUBLIC
+            -O0
+            -ggdb3
+            --coverage
+        )
+        target_link_options(break_lib PUBLIC
+            --coverage
+        )
     elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
         target_compile_options(break_lib PUBLIC
             -O2
             -ftree-vectorize
-            -ftree-vectorizer-verbose=2
+            -ftree-vectorizer-verbose=3
             -ggdb3
             -D_FORTIFY_SOURCE=2
             # -march=native
@@ -110,7 +124,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
         target_compile_options(break_lib PUBLIC
             -O3
             -ftree-vectorize
-            -ftree-vectorizer-verbose=2
+            -ftree-vectorizer-verbose=3
             -DNDEBUG
             -D_FORTIFY_SOURCE=2
             # -march=native

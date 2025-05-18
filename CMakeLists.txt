@@ -14,6 +14,11 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_EXTENSIONS False)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
+# Set built types
+set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING "Choose the type of build." FORCE)
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release RelWithDebInfo Coverage DebugWithoutAsan)
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;DebWithCov;DebWithtAsan" CACHE STRING "" FORCE)
+
 # Set Debug as the default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
