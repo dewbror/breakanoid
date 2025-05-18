@@ -36,8 +36,7 @@ jobs:
     - name: Run tests
       run: |
         cd build_cicd
-        export CMOCKA_XML_FILE=cmocka_results.xml
-        ./DebWithCov/break_tests
+        CMOCKA_XML_FILE='./cmocka_results.xml' CMOCKA_MESSAGE_OUTPUT=xml ./DebWithCov/break_tests
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
