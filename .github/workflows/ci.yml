@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y cmake lcov gcc g++ make
+
+    - name: Create build directory
+      run: mkdir build_cicd
+
+    - name: Configure CMake with coverage flags
+      run: |
+        cmake -DCMAKE_BUILD_TYPE=DebWithCov -S . -B ./build_cicd
+
+    - name: Build
+      run: |
+        cd build_cicd
+        make -j$(nproc)
+
+    - name: Run tests
+      run: |
+        cd build_cicd
+        ./DebWithCov/break_tests
+
+    - name: Generate coverage info
+      run: |
+        lcov --capture --directory build_cicd --output-file coverage.info
+        lcov --extract coverage.info '*/src/*' --output-file coverage.src.info
+        genhtml coverage.src.info --output-directory coverage_html
+
+    - name: Upload coverage report artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage_html
