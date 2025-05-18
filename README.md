@@ -15,6 +15,7 @@ Dependencies
   - [SDL3](https://github.com/libsdl-org/SDL) 3.2.14
   - [cglm](https://github.com/recp/cglm) 0.9.6
   - [stb_image](https://github.com/nothings/stb)
+  - [cmocka](https://github.com/clibs/cmocka) 1.1.5 (for tests)
 
 How to Build (with cmake)
 -----------------------
@@ -31,4 +32,4 @@ License
 
 The source code in this repository is licensed under the zlib License, see [LICENSE.txt](https://github.com/dewbror/breakanoid/blob/master/LICENSE.txt). This license applies only to the source code files.
 
---- end of README ---
+--- end of README --- w
