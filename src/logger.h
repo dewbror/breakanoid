@@ -39,7 +39,7 @@ void logger__msg(int level, const char* file, int line, const char* fmt, ...) FO
 #ifndef LOG_LEVEL
 #ifdef NDEBUG
 // Default LOG_LEVEL for NDEBUG mode is LOG_WARN
-#define LOG_LEVEL LOG_LEVEL_WARN
+#define LOG_LEVEL LOG_LEVEL_INFO
 #else
 // Default LOG_LEVEL in debug mode is LOG_DEBUG
 #define LOG_LEVEL LOG_LEVEL_DEBUG

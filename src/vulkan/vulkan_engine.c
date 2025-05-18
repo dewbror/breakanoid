@@ -19,9 +19,9 @@
 #define HEIGHT 1080
 #define WIDTH  1920
 
-// Swapchain support is not part of the Vulkan core. We need to enable the VK_KHR_swapchain device extension.
-static const uint32_t device_extensions_count = 1;
-static const char* const device_extensions[1] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+static const uint32_t device_extensions_count = 2;
+static const char* const device_extensions[2] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+                                                 VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME};
 
 static const uint32_t instance_layers_count = 0;
 
@@ -189,8 +189,8 @@ static bool is_device_suitable(vulkan_engine_t* p_engine, VkPhysicalDevice devic
  *
  * \return True if both a grapics queue family and a present queue family was found.
  */
-static bool find_queue_families(vulkan_engine_t* p_engine, VkPhysicalDevice device,
-                                queue_family_indices_t* q_fam_indices);
+static bool get_queue_families(vulkan_engine_t* p_engine, VkPhysicalDevice device,
+                               queue_family_indices_t* q_fam_indices);
 
 /**
  * Check that the device has support for the device extensions listed in device_extensions (which is currently just
@@ -214,8 +214,8 @@ static bool check_device_extension_support(VkPhysicalDevice device);
  *
  * \return True if the swapchain has support, false if not.
  */
-static bool query_swapchain_support(vulkan_engine_t* p_engine, VkPhysicalDevice device,
-                                    swapchain_support_details_t* swapchain_support);
+static bool get_swapchain_support(vulkan_engine_t* p_engine, VkPhysicalDevice device,
+                                  swapchain_support_details_t* swapchain_support);
 
 /**
  * free wrapper for use in deletion queue.
@@ -891,7 +891,7 @@ static bool pick_physical_device(vulkan_engine_t* p_engine) {
     // Allocate array holding all supported devices
     VkPhysicalDevice* devices = (VkPhysicalDevice*)malloc(device_count * sizeof(VkPhysicalDevice));
     vkEnumeratePhysicalDevices(p_engine->instance, &device_count, devices);
-    
+
     // Check for suitable device in devices
     LOG_DEBUG("Looking for suitable devices:");
     for(uint32_t i = 0; i < device_count; ++i) {
@@ -941,7 +941,7 @@ static bool is_device_suitable(vulkan_engine_t* p_engine, VkPhysicalDevice devic
 
     // Check if graphics and present queue families are supported by device
     queue_family_indices_t q_fam_indices = {0};
-    if(!find_queue_families(p_engine, device, &q_fam_indices)) {
+    if(!get_queue_families(p_engine, device, &q_fam_indices)) {
         LOG_ERROR("Required queue families not supported by device: %s", device_properties.deviceName);
         return false;
     }
@@ -953,13 +953,13 @@ static bool is_device_suitable(vulkan_engine_t* p_engine, VkPhysicalDevice devic
     }
 
     swapchain_support_details_t swapchain_support = {0};
-    bool swapchain_adequate                     = query_swapchain_support(p_engine, device, &swapchain_support);
+    bool swapchain_adequate                       = get_swapchain_support(p_engine, device, &swapchain_support);
     // Swap chain support is sufficient for this tutorial if there is at least one supported image format and
     // one supported presentation mode given the window surface we have.
     // It is important that we only try to query for swap chain support after verifying that the extension is
     // available!!!
 
-    // These are allocated in query swapchain support and must be freed!!! not ideal solution.
+    // These are allocated in query swapchain support and must be freed.
     free(swapchain_support.formats);
     free(swapchain_support.present_modes);
 
@@ -972,7 +972,7 @@ static bool is_device_suitable(vulkan_engine_t* p_engine, VkPhysicalDevice devic
     } else {
         if(!swapchain_adequate) {
             // TODO: Move LOG_ERROR to inside query_swapchain_support
-            LOG_ERROR("Swapchain not supported by device: %s", "Temp, replace with physical device name and ID");
+            LOG_ERROR("Swapchain not supported by device: %s", device_properties.deviceName);
         }
         if(!supported_features.samplerAnisotropy) {
             LOG_ERROR("Sampler anisotropy not supported by device: %s", device_properties.deviceName);
@@ -981,8 +981,8 @@ static bool is_device_suitable(vulkan_engine_t* p_engine, VkPhysicalDevice devic
     }
 }
 
-static bool find_queue_families(vulkan_engine_t* p_engine, VkPhysicalDevice device,
-                                queue_family_indices_t* q_fam_indices) {
+static bool get_queue_families(vulkan_engine_t* p_engine, VkPhysicalDevice device,
+                               queue_family_indices_t* q_fam_indices) {
     // It has been briefly touched upon before that almost every operation in Vulkan, anything from drawing to
     // uploading textures, requires commands to be submitted to a queue. There are different types of queues that
     // originate from different queue families and each family of queues allows only a subset of commands. For
@@ -992,8 +992,11 @@ static bool find_queue_families(vulkan_engine_t* p_engine, VkPhysicalDevice devi
     // findQueueFamilies that looks for all the queue families we need.
     // queue_family_indices q_fam_indices;
 
+    // Query queue family count
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, VK_NULL_HANDLE);
+
+    // Query queue families
     VkQueueFamilyProperties* queue_families =
         (VkQueueFamilyProperties*)malloc(queue_family_count * sizeof(VkQueueFamilyProperties));
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families);
@@ -1007,35 +1010,57 @@ static bool find_queue_families(vulkan_engine_t* p_engine, VkPhysicalDevice devi
 
         if(queue_families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             q_fam_indices->graphics_family = i;
-            // printf("graphics queue family index: %u\n", i);
+            LOG_TRACE("graphics queue family index: %u", i);
             got_graphics = true;
         }
         if(present_support) {
             q_fam_indices->present_family = i;
-            // printf("present queue family index:  %u\n", i);
+            LOG_TRACE("present queue family index: %u", i);
             got_present = true;
         }
-        if(got_graphics && got_present)
+        if(got_graphics && got_present) {
+            free(queue_families);
+            queue_families = NULL;
+
             return true;
+        }
     }
+
     // Note that it’s very likely that these end up being the same queue family after all, but throughout the
     // program we will treat them as if they were separate queues for a uniform approach. Nevertheless, you could
     // add logic to explicitly prefer a physical device that supports drawing and presentation in the same queue for
     // improved performance.
+
+    free(queue_families);
+    queue_families = NULL;
+
     return false;
 }
 
 static bool check_device_extension_support(VkPhysicalDevice device) {
-    uint32_t extension_count = 0;
-    vkEnumerateDeviceExtensionProperties(device, VK_NULL_HANDLE, &extension_count, VK_NULL_HANDLE);
+    if(device == NULL) {
+        LOG_ERROR("check_device_extension_support: device is NULL");
+        return false;
+    }
+
+    // Query available device extensions count
+    uint32_t available_extensions_count = 0;
+    vkEnumerateDeviceExtensionProperties(device, VK_NULL_HANDLE, &available_extensions_count, VK_NULL_HANDLE);
 
     VkExtensionProperties* available_extensions =
-        (VkExtensionProperties*)malloc(extension_count * sizeof(VkExtensionProperties));
-    vkEnumerateDeviceExtensionProperties(device, VK_NULL_HANDLE, &extension_count, available_extensions);
+        (VkExtensionProperties*)malloc(available_extensions_count * sizeof(VkExtensionProperties));
+    vkEnumerateDeviceExtensionProperties(device, VK_NULL_HANDLE, &available_extensions_count, available_extensions);
+
+#ifndef NDEBUG
+    LOG_DEBUG("Available device extensions");
+    for(uint32_t i = 0; i < available_extensions_count; ++i) {
+        LOG_DEBUG("    %s v%u", available_extensions[i].extensionName, available_extensions[i].specVersion);
+    }
+#endif
 
     for(uint32_t i = 0; i < device_extensions_count; ++i) {
         bool req_ext_found = false;
-        for(uint32_t j = 0; j < extension_count; ++j) {
+        for(uint32_t j = 0; j < available_extensions_count; ++j) {
             if(strcmp(device_extensions[i], available_extensions[j].extensionName) == 0) {
                 req_ext_found = true;
                 break;
@@ -1050,8 +1075,8 @@ static bool check_device_extension_support(VkPhysicalDevice device) {
     return true;
 }
 
-static bool query_swapchain_support(vulkan_engine_t* p_engine, VkPhysicalDevice device,
-                                    swapchain_support_details_t* p_details) {
+static bool get_swapchain_support(vulkan_engine_t* p_engine, VkPhysicalDevice device,
+                                  swapchain_support_details_t* p_details) {
     // Just checking if a swap chain is available is not sufficient, because it may not actually be compatible with
     // our window surface. Creating a swap chain also involves a lot more settings than instance and device
     // creation, so we need to query for some more details before we’re able to proceed.
@@ -1069,6 +1094,7 @@ static bool query_swapchain_support(vulkan_engine_t* p_engine, VkPhysicalDevice 
         p_details->formats_count = formats_count;
         // deletion_queue_queue(p_engine->p_main_delq, details->formats, free_wrapper);
     } else {
+        LOG_ERROR("Device swapchain surface formats unsupported");
         return false;
     }
 
@@ -1082,9 +1108,11 @@ static bool query_swapchain_support(vulkan_engine_t* p_engine, VkPhysicalDevice 
         p_details->present_modes_count = present_modes_count;
         // deletion_queue_queue(p_engine->p_main_delq, details->present_modes, free_wrapper);
     } else {
+        LOG_ERROR("Device swapchin surface present modes unsupported");
         return false;
     }
 
+    LOG_INFO("Device swapchain supported");
     return true;
 }
 
@@ -1095,9 +1123,8 @@ static void free_wrapper(void* p_mem) {
 
 static bool create_logical_device(vulkan_engine_t* p_engine) {
     queue_family_indices_t q_fam_indices = {0};
-    if(!find_queue_families(p_engine, p_engine->physical_device, &q_fam_indices)) {
-        LOG_ERROR("Required queue families not supported by device: %s",
-                  "Temp, replace with physical device name and ID");
+    if(!get_queue_families(p_engine, p_engine->physical_device, &q_fam_indices)) {
+        LOG_ERROR("Required queue families not supported by device");
         return false;
     }
 
@@ -1173,7 +1200,7 @@ static void vkDestroyDevice_wrapper(void* p_resource) {
 
 static bool create_swapchain(vulkan_engine_t* p_engine) {
     swapchain_support_details_t swapchain_support = {0};
-    if(!query_swapchain_support(p_engine, p_engine->physical_device, &swapchain_support)) {
+    if(!get_swapchain_support(p_engine, p_engine->physical_device, &swapchain_support)) {
         // TODO: Move LOG_ERROR to inside query_swapchain_support
         LOG_ERROR("Swapchain not supported by device: %s", "Temp, replace with physical device name and ID");
         return false;
@@ -1223,7 +1250,7 @@ static bool create_swapchain(vulkan_engine_t* p_engine) {
     // VK_IMAGE_USAGE_TRANSFER_DST_BIT instead and use a memory operation to transfer the rendered image to a swap
     // chain image.
     queue_family_indices_t q_fam_indices = {0};
-    find_queue_families(p_engine, p_engine->physical_device, &q_fam_indices);
+    get_queue_families(p_engine, p_engine->physical_device, &q_fam_indices);
 
     uint32_t q_fam_indices_array[] = {q_fam_indices.graphics_family, q_fam_indices.present_family};
     if(q_fam_indices.graphics_family != q_fam_indices.present_family) {

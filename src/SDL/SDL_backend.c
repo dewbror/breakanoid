@@ -60,7 +60,7 @@ bool init_SDL_backend(vulkan_engine_t* p_engine) {
     }
 
     LOG_INFO("SDL window created");
-    LOG_INFO("SDL backend successfully initialized")
+    LOG_INFO("SDL backend successfully initialized");
     return true;
 }
 
