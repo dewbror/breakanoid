@@ -22,13 +22,8 @@ You must have the vulkan SDK installed to build this project. Cmake will create 
 
 Build release
 ```
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B ./build_release
-cmake --build ./build_release 
-```
-Build debug
-```
-cmake -DCMAKE_BUILD_TYPE=Debug -S . -B ./build_debug
-cmake --build ./build_debug
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B ./build
+cmake --build ./build 
 ```
 
 License
