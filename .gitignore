@@ -1,6 +1,7 @@
 .vscode
 build
-build*
+build_d*
+build_r*
 lib-devel
 lib
 libs

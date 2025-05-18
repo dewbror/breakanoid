@@ -11,7 +11,7 @@ REPOS=(
 REPO_TAGS=(
     v0.9.6
     master
-    master
+    1.1.5
     release-3.2.14
 )
 
