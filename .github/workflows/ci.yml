@@ -1,5 +1,10 @@
 name: CI
 
+permissions:
+  checks: write
+  pull-requests: write    # (optional, but sometimes needed)
+  contents: read
+
 on:
   push:
     branches: [ master ]
