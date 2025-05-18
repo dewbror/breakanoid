@@ -1,7 +1,7 @@
 Breakanoid 0.1.0
 ================
 
-Breakanoid is an open source, 2D game written in C99 using vulkan 1.0 and SDL3.
+Breakanoid is an open source, 2D game written in C99 using vulkan 1.3 and SDL3.
 
 TODO
 ----
