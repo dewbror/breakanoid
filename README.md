@@ -1,7 +1,7 @@
 Breakanoid 0.1.0
 ================
 
-Breakanoid is an open source, 2D game written in C99 using vulkan 1.3 and SDL3.
+A Vulkan + SDL3 project.
 
 TODO
 ----
@@ -32,4 +32,4 @@ License
 
 The source code in this repository is licensed under the zlib License, see [LICENSE.txt](https://github.com/dewbror/breakanoid/blob/master/LICENSE.txt). This license applies only to the source code files.
 
---- end of README --- w
+--- end of README ---
