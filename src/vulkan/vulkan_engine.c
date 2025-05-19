@@ -283,7 +283,7 @@ static VkExtent2D choose_swapchain_extent(vulkan_engine_t* p_engine, VkSurfaceCa
 /**
  * vkDestroySwapchainKHR for use in deletion queue.
  *
- * \param[in] p_engine
+ * \param[in] p_engine Pointer to the vulkan engine
  */
 static void vkDestroySwapchainKHR_wrapper(void* p_engine);
 
@@ -306,8 +306,49 @@ static bool create_image_views(vulkan_engine_t* p_engine);
  *
  * \return The image view.
  */
-static VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags,
-                                     uint32_t mip_levels);
+static bool get_image_view(vulkan_engine_t* p_engine, VkImageView image_view, VkImage image, VkFormat format,
+                           VkImageAspectFlags aspect_flags, uint32_t mip_levels);
+/**
+ * vkDestroyImageView wrapper for swapchin image view array
+ *
+ * \param[in] p_engine Pointer to the vulkan engine
+ */
+static void vkDestroyImageView_array_wrapper(void* p_engine);
+
+/**
+ * vkDestroyImage and vkFreeMemory wrapper allocated images
+ *
+ * \param[in] p_engine Pointer to the vulkan engine
+ */
+static void vkDestroyImage_FreeMemory_wrapper(void* p_engine);
+
+/**
+ * vkDestroyImageView wrapper
+ *
+ * \param[in] p_engine Pointer to the vulkan engine
+ */
+static void vkDestroyImageView_wrapper(void* p_engine);
+
+/**
+ * Create the command pools/allocate command buffers for commands submitted to graphics queue and for immediate submits.
+ *
+ * \param[in] p_engine Pointer to the vulkan engine
+ */
+static bool create_commands(vulkan_engine_t* p_engine);
+
+/**
+ * vkDestroyCommandPool wrapper
+ *
+ * \param[in] p_engine Pointer to the vulkan engine
+ */
+static void vkDestroyCommandPool_wrapper(void* p_engine);
+
+/**
+ * vkDestroyCommandPool wrapper for command pools in frame array
+ *
+ * \param[in] p_engine Pointer to the vulkan engine
+ */
+static void vkDestroyCommandPool_array_wrapper(void* p_engine);
 
 bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     // Check if p_engine is NULL
@@ -376,10 +417,16 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     }
 
     // Create image views
-    // if(!create_image_views(p_engine)) {
-    //     printf("Failed to create image views\n");
-    //     return false;
-    // }
+    if(!create_image_views(p_engine)) {
+        LOG_ERROR("Failed to create swapchain image views\n");
+        return false;
+    }
+
+    // Create commands
+    if(!create_commands(p_engine)) {
+        LOG_ERROR("Failed to create commands");
+        return false;
+    }
 
     // Just playing around with cglm
     // vec3 vectorX = {1.0f, .0f, .0f};
@@ -882,7 +929,7 @@ static bool pick_physical_device(vulkan_engine_t* p_engine) {
     // Get number of devices with Vulkan support
     vkEnumeratePhysicalDevices(p_engine->instance, &device_count, VK_NULL_HANDLE);
 
-    // If no deives with Vulkan support, error
+    // If no devices with Vulkan support, error
     if(device_count == 0) {
         LOG_ERROR("Failed to find GPU with Vulkan support");
         return false;
@@ -907,7 +954,7 @@ static bool pick_physical_device(vulkan_engine_t* p_engine) {
     free((void*)devices);
 
     // If no suitable device was found, runtime error
-    if(p_engine->physical_device == VK_NULL_HANDLE) {
+    if(p_engine->physical_device == NULL) {
         LOG_ERROR("Failed to find suitable GPU");
         return false;
     }
@@ -952,6 +999,7 @@ static bool is_device_suitable(vulkan_engine_t* p_engine, VkPhysicalDevice devic
         return false;
     }
 
+    // Check if the device and surface are compatible
     swapchain_support_details_t swapchain_support = {0};
     bool swapchain_adequate                       = get_swapchain_support(p_engine, device, &swapchain_support);
     // Swap chain support is sufficient for this tutorial if there is at least one supported image format and
@@ -1112,7 +1160,7 @@ static bool get_swapchain_support(vulkan_engine_t* p_engine, VkPhysicalDevice de
         return false;
     }
 
-    LOG_INFO("Device swapchain supported");
+    LOG_DEBUG("Device swapchain supported");
     return true;
 }
 
@@ -1122,6 +1170,12 @@ static void free_wrapper(void* p_mem) {
 }
 
 static bool create_logical_device(vulkan_engine_t* p_engine) {
+    if(p_engine == NULL) {
+        LOG_ERROR("create_logical_device: p_engine is NULL");
+        return false;
+    }
+
+    // Check device graphics and present queue family support and store their indices in q_fam_indices
     queue_family_indices_t q_fam_indices = {0};
     if(!get_queue_families(p_engine, p_engine->physical_device, &q_fam_indices)) {
         LOG_ERROR("Required queue families not supported by device");
@@ -1131,22 +1185,39 @@ static bool create_logical_device(vulkan_engine_t* p_engine) {
     // Hard coded, make dynamic in future?
     uint32_t unique_q_fams_count = 0;
     if(q_fam_indices.graphics_family == q_fam_indices.present_family) {
+        // The graphics and present queue families are the same, this is the most common situation
         unique_q_fams_count = 1;
     } else {
+        // They are not the same, not common but we will support it?
         unique_q_fams_count = 2;
     }
+    LOG_DEBUG("Unique queue families:  %u", unique_q_fams_count);
+
+    // Allocate array of ints to hold the queue family indices
     uint32_t* unique_q_fams = (uint32_t*)malloc(unique_q_fams_count * sizeof(uint32_t));
+    if(unique_q_fams == NULL) {
+        LOG_ERROR("Failed to allocate memory of size %lu: %s", unique_q_fams_count * sizeof(uint32_t), strerror(errno));
+    }
     if(unique_q_fams_count == 1) {
         unique_q_fams[0] = q_fam_indices.graphics_family;
     } else if(unique_q_fams_count == 2) {
         unique_q_fams[0] = q_fam_indices.graphics_family;
         unique_q_fams[1] = q_fam_indices.present_family;
     } else {
+        LOG_ERROR("More than two queue families is unsupported currently");
         return false;
     }
 
+    // Create array of device queue create infos
     VkDeviceQueueCreateInfo* q_create_infos =
         (VkDeviceQueueCreateInfo*)malloc(unique_q_fams_count * sizeof(VkDeviceQueueCreateInfo));
+    if(q_create_infos == NULL) {
+        LOG_ERROR("Failed to allocate memory of size %lu: %s", unique_q_fams_count * sizeof(VkDeviceQueueCreateInfo),
+                  strerror(errno));
+        return false;
+    }
+
+    // Fill our device queue create info(s)
     float q_priority = 1.0f;
     for(uint32_t i = 0; i < unique_q_fams_count; ++i) {
         VkDeviceQueueCreateInfo q_create_info = {0};
@@ -1157,10 +1228,12 @@ static bool create_logical_device(vulkan_engine_t* p_engine) {
         q_create_infos[i]                     = q_create_info;
     }
 
+    // Enable device features (non currently)
     VkPhysicalDeviceFeatures device_features = {0};
     device_features.samplerAnisotropy        = VK_FALSE;
     device_features.sampleRateShading        = VK_FALSE; // enable sample shading feature for the device
-    // Now we can start filling the main VkDeviceCreateInfo strucutre.
+
+    // Start filling the main VkDeviceCreateInfo structure.
     VkDeviceCreateInfo create_dev_info   = {0};
     create_dev_info.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     create_dev_info.pQueueCreateInfos    = q_create_infos;
@@ -1183,12 +1256,18 @@ static bool create_logical_device(vulkan_engine_t* p_engine) {
     // The queues are automatically created along with the logical device.
     // We can use the vkGetDeviceQueue function to retrieve queue handles for each queue family. The parameters are
     // the logical device, queue family, queue index and a pointer to the variable to store the queue handle in.
-    // Because we’re only creating a single queue from this family, we’ll simply use index 0.
+    // Because we’re only creating a single queue from "each" family, we’ll simply use index 0.
     vkGetDeviceQueue(p_engine->device, q_fam_indices.graphics_family, 0, &p_engine->graphics_queue);
     vkGetDeviceQueue(p_engine->device, q_fam_indices.present_family, 0, &p_engine->present_queue);
 
+    p_engine->graphics_queue_index = q_fam_indices.graphics_family;
+    p_engine->present_queue_index  = q_fam_indices.present_family;
+
+    // Free dynamically allocated arrays
     free(unique_q_fams);
+    unique_q_fams = NULL;
     free(q_create_infos);
+    q_create_infos = NULL;
     return true;
 }
 
@@ -1199,22 +1278,36 @@ static void vkDestroyDevice_wrapper(void* p_resource) {
 }
 
 static bool create_swapchain(vulkan_engine_t* p_engine) {
-    swapchain_support_details_t swapchain_support = {0};
-    if(!get_swapchain_support(p_engine, p_engine->physical_device, &swapchain_support)) {
-        // TODO: Move LOG_ERROR to inside query_swapchain_support
-        LOG_ERROR("Swapchain not supported by device: %s", "Temp, replace with physical device name and ID");
+    if(p_engine == NULL) {
+        LOG_ERROR("create_swapchain: p_engine is NULL");
         return false;
     }
 
+    // Swapchain support has already been checked but we run this function again to retrieve the swapchain support
+    // details (the surface formats and present modes)
+    swapchain_support_details_t swapchain_support = {0};
+    if(!get_swapchain_support(p_engine, p_engine->physical_device, &swapchain_support)) {
+        // TODO: Move LOG_ERROR to inside query_swapchain_support
+        LOG_ERROR("Swapchain not supported by device");
+        return false;
+    }
+
+    // Choose which surface formats we want to use
     VkSurfaceFormatKHR surface_format =
         choose_swapchain_surface_format(swapchain_support.formats, swapchain_support.formats_count);
+
+    // Choose which present modes we want to use
     VkPresentModeKHR present_mode =
         choose_swapchain_present_mode(swapchain_support.present_modes, swapchain_support.present_modes_count);
+
+    // Choose our swapchain extent
     VkExtent2D extent = choose_swapchain_extent(p_engine, swapchain_support.capabilities);
 
     // Check that the extent is non-zero
-    if(extent.height == 0 && extent.width == 0)
+    if(extent.height == 0 && extent.width == 0) {
+        LOG_ERROR("The swapchain extent is zero in one/both dimensions");
         return false;
+    }
 
     // Aside from these properties we also have to decide how many images we would like to have in the swap chain.
     // The implementation specifies the minimum number that it requires to function. However, simply sticking to
@@ -1222,18 +1315,20 @@ static bool create_swapchain(vulkan_engine_t* p_engine) {
     // can acquire another image to render to. Therefore it is recommended to request at least one more image than
     // the minimum.
     uint32_t image_count = swapchain_support.capabilities.minImageCount + 1;
+
     // We should also make sure to not exceed the maximum number of images while doing this, where 0 is a special
     // value that means that there is no maximum.
     if(swapchain_support.capabilities.maxImageCount > 0 && image_count > swapchain_support.capabilities.maxImageCount) {
         image_count = swapchain_support.capabilities.maxImageCount;
     }
+    LOG_DEBUG("Minimum number of swapchain images to create: %u", image_count);
 
-    // Lets create the swap chain object, the Vulkan way, with a create info struct ofc!
+    // Create the swapchain
     VkSwapchainCreateInfoKHR create_swapchain_info = {0};
     create_swapchain_info.sType                    = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    // Here we specify which surface the swap chain is tied to.
+    // Here we specify which surface the swapchain is tied to.
     create_swapchain_info.surface = p_engine->surface;
-    // After specifying which surface the swap chain should be tied to, the details of the swap chain images are
+    // After specifying which surface the swapchain should be tied to, the details of the swapchain images are
     // specified.
     create_swapchain_info.minImageCount    = image_count;
     create_swapchain_info.imageFormat      = surface_format.format;
@@ -1241,7 +1336,11 @@ static bool create_swapchain(vulkan_engine_t* p_engine) {
     create_swapchain_info.imageExtent      = extent;
     create_swapchain_info.imageArrayLayers = 1;
     // create_swapchain_info.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    create_swapchain_info.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+    // I am attempting to follow the cppvk13 tutorial where the swapchain is first created with this bit
+    // VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT is the default for vk-bootstrap
+    create_swapchain_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
     // The imageArrayLayers specifies the amount of layers each image consists of. This is always 1 unless you are
     // developing a stereoscopic 3D application. The imageUsage bit field specifies what kind of operations we’ll
     // use the images in the swap chain for. In this tutorial we’re going to render directly to them, which means
@@ -1252,6 +1351,7 @@ static bool create_swapchain(vulkan_engine_t* p_engine) {
     queue_family_indices_t q_fam_indices = {0};
     get_queue_families(p_engine, p_engine->physical_device, &q_fam_indices);
 
+    // If the queue families are not the same then they need to share the swapchain, if they are then theres no problem.
     uint32_t q_fam_indices_array[] = {q_fam_indices.graphics_family, q_fam_indices.present_family};
     if(q_fam_indices.graphics_family != q_fam_indices.present_family) {
         create_swapchain_info.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
@@ -1262,26 +1362,31 @@ static bool create_swapchain(vulkan_engine_t* p_engine) {
         create_swapchain_info.queueFamilyIndexCount = 0;              // Optional
         create_swapchain_info.pQueueFamilyIndices   = VK_NULL_HANDLE; // Optional
     }
+
     // We can specify that a certain transform should be applied to images in the swap chain if it is supported
     // (supportedTransforms in capabilities), like a 90 degree clockwise rotation or horizontal flip. To specify
     // that you do not want any transformation, simply specify the current transformation.
     create_swapchain_info.preTransform = swapchain_support.capabilities.currentTransform;
+
     // The compositeAlpha field specifies if the alpha channel should be used for blending with other windows in the
     // window system. You’ll almost always want to simply ignore the alpha channel, hence
     // VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR.
     create_swapchain_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     create_swapchain_info.presentMode    = present_mode;
+
     // If the clipped member is set to VK_TRUE then that means that we
     // don’t care about the color of pixels that are obscured, for example because another window is in front of
     // them. Unless you really need to be able to read these pixels back and get predictable results, you’ll get the
     // best performance by enabling clipping.
     create_swapchain_info.clipped = VK_TRUE;
+
     // That leaves one last field, oldSwapchain. With Vulkan it’s possible that your swap chain becomes invalid or
     // unoptimized while your application is running, for example because the window was resized. In that case the
     // swap chain actually needs to be recreated from scratch and a reference to the old one must be specified in
     // this field. This is a complex topic that we’ll learn more about in a future chapter. For now we’ll assume
     // that we’ll only ever create one swap chain.
     create_swapchain_info.oldSwapchain = VK_NULL_HANDLE;
+
     // Create swap chain.
     if(vkCreateSwapchainKHR(p_engine->device, &create_swapchain_info, VK_NULL_HANDLE, &p_engine->swapchain) !=
        VK_SUCCESS) {
@@ -1289,27 +1394,38 @@ static bool create_swapchain(vulkan_engine_t* p_engine) {
         return false;
     }
     LOG_INFO("Swapchain created");
-    deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroySwapchainKHR_wrapper);
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroySwapchainKHR_wrapper)) {
+        LOG_ERROR("Failed to queue deletion node");
+        vkDestroySwapchainKHR_wrapper(p_engine);
+        return false;
+    }
 
     // The swap chain has been created now, so all that remains is retrieving the handles of the VkImages in it.
     // We’ll reference these during rendering operations in later chapters. The images were created by the
-    // implementation for the swap chain and they will be automatically cleaned up once the swap chain has been
+    // implementation for the swapchain and they will be automatically cleaned up once the swap chain has been
     // destroyed, therefore we don’t need to add any cleanup code. Remember that we only specified a minimum number
-    // of images in the swap chain, so the implementation is allowed to create a swap chain with more. That’s why
+    // of images in the swap chain, so the implementation is allowed to create a swapchain with more. That’s why
     // we’ll first query the final number of images with vkGetSwapchainImagesKHR, then resize the container and
     // finally call it again to retrieve the handles.
     vkGetSwapchainImagesKHR(p_engine->device, p_engine->swapchain, &image_count, VK_NULL_HANDLE);
+    LOG_DEBUG("Number of swapchain images created: %u", image_count);
 
+    // Allocate array to hole swapchain images
     p_engine->swapchain_images.p_images     = (VkImage*)malloc(image_count * sizeof(VkImage));
     p_engine->swapchain_images.images_count = image_count;
-    deletion_queue_queue(p_engine->p_main_delq, (void*)p_engine->swapchain_images.p_images, free_wrapper);
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine->swapchain_images.p_images, free_wrapper)) {
+        LOG_ERROR("Failed to queue deletion node");
+        free_wrapper(p_engine->swapchain_images.p_images);
+        return false;
+    }
 
+    // Get swapchain images
     vkGetSwapchainImagesKHR(p_engine->device, p_engine->swapchain, &image_count, p_engine->swapchain_images.p_images);
     // Store the format and extent we’ve chosen for the swap chain images in member variables.
     p_engine->swapchain_image_format = surface_format.format;
     p_engine->swapchain_extent       = extent;
 
-    // These are allocated in query swapchain support and must be freed!!! not ideal solution.
+    // These are allocated in get swapchain support
     free(swapchain_support.formats);
     swapchain_support.formats = NULL;
     free(swapchain_support.present_modes);
@@ -1333,7 +1449,7 @@ static VkSurfaceFormatKHR choose_swapchain_surface_format(VkSurfaceFormatKHR* p_
     // https://registry.khronos.org/vulkan/specs/latest/man/html/VkFormat.html
 
     for(size_t i = 0; i < formats_count; ++i) {
-        if(p_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM &&
+        if(p_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM && // Used in the cppvk13 tutorial
            p_formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             return p_formats[i];
         }
@@ -1389,8 +1505,8 @@ static VkExtent2D choose_swapchain_extent(vulkan_engine_t* p_engine, VkSurfaceCa
 
         VkExtent2D actual_extent = {(uint32_t)width, (uint32_t)height};
 
-        // The clamp function is used here to bound the values of width and height between the allowed minimum and
-        // maximum extents that are supported by the implementation.
+        // We "clamp" the width and height so that they are within the bounds of the allowed min/max values supported by
+        // the implementation
         if(actual_extent.width < capabilities.minImageExtent.width) {
             actual_extent.width = capabilities.minImageExtent.width;
         } else if(actual_extent.width > capabilities.maxImageExtent.width) {
@@ -1408,25 +1524,315 @@ static VkExtent2D choose_swapchain_extent(vulkan_engine_t* p_engine, VkSurfaceCa
 }
 
 static bool create_image_views(vulkan_engine_t* p_engine) {
+    if(p_engine == NULL) {
+        LOG_ERROR("create_image_views: p_engine is NULL");
+        return false;
+    }
+
+    // Allocate array to hold image views
     p_engine->swapchain_images.p_image_views =
         (VkImageView*)malloc(p_engine->swapchain_images.images_count * sizeof(VkImageView));
-    deletion_queue_queue(p_engine->p_main_delq, (void*)p_engine->swapchain_images.p_image_views, free_wrapper);
+    if(p_engine->swapchain_images.p_image_views == NULL) {
+        LOG_ERROR("Failed to allocate memory of size %lu: %s",
+                  p_engine->swapchain_images.images_count * sizeof(VkImageView), strerror(errno));
+    }
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine->swapchain_images.p_image_views, free_wrapper)) {
+        LOG_ERROR("Failed to queue deletion node");
+        free_wrapper(p_engine->swapchain_images.p_image_views);
+        return false;
+    }
 
+    // create image views
     for(uint32_t i = 0; i < p_engine->swapchain_images.images_count; ++i) {
-        p_engine->swapchain_images.p_image_views[i] = create_image_view(
-            p_engine->swapchain_images.p_images[i], p_engine->swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+        // get_image_view(p_engine, p_engine->swapchain_images.p_image_views[i], p_engine->swapchain_images.p_images[i],
+        //                  p_engine->swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+        VkImageViewCreateInfo view_info = {0};
+        view_info.sType                 = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        view_info.image                 = p_engine->swapchain_images.p_images[i];
+
+        // The viewType and format fields specify how the image data should be interpreted. The viewType parameter
+        // allows you to treat images as 1D textures, 2D textures, 3D textures and cube maps.
+        view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_info.format   = p_engine->swapchain_image_format;
+
+        // The components field allows you to swizzle the color channels around. For example, you can map all of the
+        // channels to the red channel for a monochrome texture. You can also map constant values of 0 and 1 to a
+        // channel. In our case we’ll stick to the default mapping.
+        view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+        // The subresourceRange field describes what the image’s purpose is and which part of the image should be
+        // accessed. Our images will be used as color targets without any mipmapping levels or multiple layers.
+        view_info.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        view_info.subresourceRange.baseMipLevel   = 0;
+        view_info.subresourceRange.levelCount     = 1;
+        view_info.subresourceRange.baseArrayLayer = 0;
+        view_info.subresourceRange.layerCount     = 1;
+
+        // Create image view
+        if(vkCreateImageView(p_engine->device, &view_info, VK_NULL_HANDLE,
+                             &p_engine->swapchain_images.p_image_views[i]) != VK_SUCCESS) {
+            LOG_ERROR("Failed to create image view");
+            return false;
+        }
+    }
+
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyImageView_array_wrapper)) {
+        LOG_ERROR("Failed to queue deletion node");
+        vkDestroyImageView_array_wrapper(p_engine);
+        return false;
+    }
+
+    // CREATE DRAW IMAGE
+
+    p_engine->draw_image.format  = VK_FORMAT_R16G16B16A16_SFLOAT;
+    VkExtent3D draw_image_extent = {p_engine->window_extent.width, p_engine->window_extent.height, 1};
+    p_engine->draw_image.extent  = draw_image_extent;
+
+    VkImageUsageFlags draw_image_usage = 0;
+
+    draw_image_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    draw_image_usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    draw_image_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    draw_image_usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    draw_image_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    VkImageCreateInfo img_info = {0};
+
+    img_info.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    img_info.imageType     = VK_IMAGE_TYPE_2D;
+    img_info.extent        = p_engine->draw_image.extent;
+    img_info.extent.depth  = 1;
+    img_info.mipLevels     = 1;
+    img_info.arrayLayers   = 1;
+    img_info.format        = p_engine->draw_image.format; // Or your needed format
+    img_info.tiling        = VK_IMAGE_TILING_OPTIMAL;     // Usually optimal for GPU use
+    img_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;   // = 0 default value
+    img_info.usage         = draw_image_usage;            // Example
+    img_info.samples       = VK_SAMPLE_COUNT_1_BIT;
+    img_info.sharingMode   = VK_SHARING_MODE_EXCLUSIVE; // = 0 default value
+
+    if(vkCreateImage(p_engine->device, &img_info, VK_NULL_HANDLE, &p_engine->draw_image.image) != VK_SUCCESS) {
+        LOG_ERROR("Failed to create draw image");
+        return false;
+    }
+
+    // For the draw image, we want to allocate it on the GPU local memory
+    // ALLOCATE MEMORY ON THE GPU
+
+    VkMemoryRequirements mem_req;
+    vkGetImageMemoryRequirements(p_engine->device, p_engine->draw_image.image, &mem_req);
+
+    VkMemoryAllocateInfo alloc_info = {0};
+    alloc_info.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.allocationSize       = mem_req.size;
+
+    // Find a device local memory type
+    uint32_t mem_type_index = 0;
+    VkPhysicalDeviceMemoryProperties mem_prop;
+    vkGetPhysicalDeviceMemoryProperties(p_engine->physical_device, &mem_prop);
+
+    for(uint32_t i = 0; i < mem_prop.memoryTypeCount; ++i) {
+        if((mem_req.memoryTypeBits & (1 << i)) &&
+           (mem_prop.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ==
+               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+            mem_type_index = i;
+            break;
+        }
+    }
+
+    alloc_info.memoryTypeIndex = mem_type_index;
+
+    // VkDeviceMemory img_memory = NULL;
+    vkAllocateMemory(p_engine->device, &alloc_info, VK_NULL_HANDLE, &p_engine->draw_image.mem);
+
+    vkBindImageMemory(p_engine->device, p_engine->draw_image.image, p_engine->draw_image.mem, 0);
+
+    // CREATE DRAW IMAGE VIEW
+
+    VkImageViewCreateInfo img_view_info = {0};
+
+    img_view_info.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    img_view_info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+    img_view_info.image                           = p_engine->draw_image.image;
+    img_view_info.format                          = p_engine->draw_image.format;
+    img_view_info.subresourceRange.baseMipLevel   = 0;
+    img_view_info.subresourceRange.levelCount     = 1;
+    img_view_info.subresourceRange.baseArrayLayer = 0;
+    img_view_info.subresourceRange.layerCount     = 1;
+    img_view_info.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    if(vkCreateImageView(p_engine->device, &img_view_info, VK_NULL_HANDLE, &p_engine->draw_image.image_view) !=
+       VK_SUCCESS) {
+        LOG_ERROR("Failed to create draw image view");
+        return false;
+    }
+
+    // ADD DESTRUCTION OF DRAW IMAGE AND DRAW IMAGE VIEW TO DELETION QUEUE
+
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyImage_FreeMemory_wrapper)) {
+        LOG_ERROR("Failed to queue deletion node");
+        vkDestroyImage_FreeMemory_wrapper(p_engine);
+        return false;
+    }
+
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyImageView_wrapper)) {
+        LOG_ERROR("Failed to queue deletion node");
+        vkDestroyImageView_wrapper(p_engine);
+        return false;
+    }
+
+    LOG_INFO("Image views created");
+    return true;
+}
+
+static bool get_image_view(vulkan_engine_t* p_engine, VkImageView image_view, VkImage image, VkFormat format,
+                           VkImageAspectFlags aspect_flags, uint32_t mip_levels) {
+    // TODO: Sanatize inputs
+
+    // Fill image view create info
+    VkImageViewCreateInfo view_info = {0};
+    view_info.sType                 = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    view_info.image                 = image;
+
+    // The viewType and format fields specify how the image data should be interpreted. The viewType parameter
+    // allows you to treat images as 1D textures, 2D textures, 3D textures and cube maps.
+    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    view_info.format   = format;
+
+    // The components field allows you to swizzle the color channels around. For example, you can map all of the
+    // channels to the red channel for a monochrome texture. You can also map constant values of 0 and 1 to a
+    // channel. In our case we’ll stick to the default mapping.
+    view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+    // The subresourceRange field describes what the image’s purpose is and which part of the image should be
+    // accessed. Our images will be used as color targets without any mipmapping levels or multiple layers.
+    view_info.subresourceRange.aspectMask     = aspect_flags;
+    view_info.subresourceRange.baseMipLevel   = 0;
+    view_info.subresourceRange.levelCount     = mip_levels;
+    view_info.subresourceRange.baseArrayLayer = 0;
+    view_info.subresourceRange.layerCount     = 1;
+
+    // Create image view
+    if(vkCreateImageView(p_engine->device, &view_info, VK_NULL_HANDLE, &image_view) != VK_SUCCESS) {
+        LOG_ERROR("Failed to create image view");
+        return false;
+    }
+
+    LOG_DEBUG("Image view created");
+    return true;
+}
+
+static void vkDestroyImageView_array_wrapper(void* p_engine) {
+    LOG_DEBUG("Callback: vkDestroyImageView_array_wrapper");
+    for(uint32_t i = 0; i < ((vulkan_engine_t*)p_engine)->swapchain_images.images_count; ++i) {
+        LOG_DEBUG("    Destroying image view, index: %u", i);
+        vkDestroyImageView(((vulkan_engine_t*)p_engine)->device,
+                           ((vulkan_engine_t*)p_engine)->swapchain_images.p_image_views[i], VK_NULL_HANDLE);
     }
 }
 
-static VkImageView create_image_view(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags,
-                                     uint32_t mip_levels) {
-    // UNUSED
-    (void)image;
-    (void)format;
-    (void)aspect_flags;
-    (void)mip_levels;
-
-    VkImageViewCreateInfo view_info = {0};
-
-    return NULL;
+static void vkDestroyImage_FreeMemory_wrapper(void* p_engine) {
+    LOG_DEBUG("Callback: vkDestroyImage_FreeMemory_wrapper");
+    vkDestroyImage(((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->draw_image.image,
+                   VK_NULL_HANDLE); // Destroy the VkImage
+    vkFreeMemory(((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->draw_image.mem,
+                 VK_NULL_HANDLE); // Free the device memory
 }
+
+static void vkDestroyImageView_wrapper(void* p_engine) {
+    LOG_DEBUG("Callback: vkDestroyImageView_wrapper");
+    vkDestroyImageView(((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->draw_image.image_view,
+                       VK_NULL_HANDLE);
+}
+
+static bool create_commands(vulkan_engine_t* p_engine) {
+    if(p_engine == NULL) {
+        LOG_ERROR("create_commands: p_engine is NULL");
+        return false;
+    }
+
+    // Create a command pool for commands submitted to the graphics queue
+    // We also want the pool to allow for resetting of individual command buffers
+
+    VkCommandPoolCreateInfo cmd_pool_info = {0};
+
+    cmd_pool_info.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmd_pool_info.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    cmd_pool_info.queueFamilyIndex = p_engine->graphics_queue_index;
+
+    // Allocate the default command buffer that we will use for rendering
+    VkCommandBufferAllocateInfo render_cmd_alloc_info = {0};
+
+    render_cmd_alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    render_cmd_alloc_info.commandBufferCount = 1;
+    render_cmd_alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
+        if(vkCreateCommandPool(p_engine->device, &cmd_pool_info, VK_NULL_HANDLE, &p_engine->frames[i].cmd_pool) !=
+           VK_SUCCESS) {
+            LOG_ERROR("Failed to create frame command pool");
+            return false;
+        }
+        render_cmd_alloc_info.commandPool = p_engine->frames[i].cmd_pool;
+        if(vkAllocateCommandBuffers(p_engine->device, &render_cmd_alloc_info, &p_engine->frames[i].main_cmd_buffer) !=
+           VK_SUCCESS) {
+            LOG_ERROR("Failed to create frame command pool");
+            return false;
+        }
+    }
+
+    // Create immediate submit command pool and command buffer
+
+    if(vkCreateCommandPool(p_engine->device, &cmd_pool_info, VK_NULL_HANDLE, &p_engine->imm_cmd_pool) != VK_SUCCESS) {
+        LOG_ERROR("Failed to create immediate command pool");
+        return false;
+    }
+
+    VkCommandBufferAllocateInfo imm_cmd_alloc_info = {0};
+
+    imm_cmd_alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    imm_cmd_alloc_info.commandBufferCount = 1;
+    imm_cmd_alloc_info.commandPool        = p_engine->imm_cmd_pool;
+    imm_cmd_alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+    if(vkAllocateCommandBuffers(p_engine->device, &imm_cmd_alloc_info, &p_engine->imm_cmd_buffer) != VK_SUCCESS) {
+        LOG_ERROR("Failed to allocate immediate command buffer");
+        return false;
+    }
+
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyCommandPool_wrapper)) {
+        LOG_ERROR("Failed to queue deletion node");
+        vkDestroyCommandPool_wrapper(p_engine);
+        return false;
+    }
+
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyCommandPool_array_wrapper)) {
+        LOG_ERROR("Failed to queue deletion node");
+        vkDestroyCommandPool_array_wrapper(p_engine);
+        return false;
+    }
+
+    LOG_INFO("Commands created");
+    return true;
+}
+
+static void vkDestroyCommandPool_wrapper(void* p_engine) {
+    LOG_DEBUG("Callback: vkDestroyCommandPool_wrapper");
+    vkDestroyCommandPool(((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->imm_cmd_pool,
+                         VK_NULL_HANDLE);
+}
+
+static void vkDestroyCommandPool_array_wrapper(void* p_engine) {
+    LOG_DEBUG("Callback: vkDestroyCommandPool_array_wrapper");
+    for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
+        LOG_DEBUG("    Destroying frame command pool, index: %d", i);
+        vkDestroyCommandPool(((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->frames[i].cmd_pool,
+                             VK_NULL_HANDLE);
+    }
+}
+

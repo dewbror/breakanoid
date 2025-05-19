@@ -41,7 +41,7 @@ bool deletion_queue_queue(deletion_queue_t* p_queue, void* p_resource, void (*de
     p_new_node->delete_func = delete_func;
 
     // Make sure the new node points to the previous node
-    if(p_queue->p_last) {
+    if(p_queue->p_last != NULL) {
         p_new_node->p_prev = p_queue->p_last;
     } else {
         p_queue->p_first = p_new_node;
@@ -70,7 +70,7 @@ bool deletion_queue_flush(deletion_queue_t** pp_queue) {
 
     // Flush deletion queue
     LOG_DEBUG("Flushing deletion queue");
-    while(p_queue->p_last) {
+    while(p_queue->p_last != NULL) {
         deletion_node_t* p_node = p_queue->p_last;
         p_queue->p_last         = p_node->p_prev;
 

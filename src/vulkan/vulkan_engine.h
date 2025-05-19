@@ -4,13 +4,14 @@
 
 #ifndef VULKAN_ENGINE_H_
 #define VULKAN_ENGINE_H_
+#include "util/deletion_queue.h"
 #pragma once
 
 #include <stdbool.h>
 
 #include <vulkan/vulkan_core.h>
 
-// Vulkan headers
+#define FRAMES_IN_FLIGHT 2
 
 /**
  * A struct containing a pointer to an array of VkImages and the size of the array in number of VkImages.
@@ -20,6 +21,24 @@ typedef struct swapchain_images_s {
     VkImageView* p_image_views;
     uint32_t images_count;
 } swapchain_images_t;
+
+typedef struct allocated_image_s {
+    VkImage image;
+    VkImageView image_view;
+    // VmaAllocation alloc;
+    VkDeviceMemory mem;
+    VkExtent3D extent;
+    VkFormat format;
+} allocated_image_t;
+
+typedef struct frame_data_s {
+    VkCommandPool cmd_pool;
+    VkCommandBuffer main_cmd_buffer;
+    VkSemaphore swapchain_semaphore;
+    VkSemaphore render_semaphore;
+    VkFence render_fence;
+    struct deletion_queue_s* p_delq;
+} frame_data_t;
 
 /**
  * A struct containing all the necessary vulkan fields.
@@ -34,12 +53,19 @@ typedef struct vulkan_engine_s {
     VkPhysicalDevice physical_device;
     VkDevice device;
     VkQueue graphics_queue;
+    uint32_t graphics_queue_index;
     VkQueue present_queue;
+    uint32_t present_queue_index;
     VkSampleCountFlagBits msaa_samples;
     VkSwapchainKHR swapchain;
     swapchain_images_t swapchain_images;
-    VkFormat swapchain_image_format;
-    VkExtent2D swapchain_extent;
+    VkFormat swapchain_image_format; // Move to swapchain_images_t?
+    VkExtent2D swapchain_extent;     // Move to swapchain_images_t?
+    allocated_image_t draw_image;
+    long frame_count;
+    frame_data_t frames[FRAMES_IN_FLIGHT];
+    VkCommandPool imm_cmd_pool;
+    VkCommandBuffer imm_cmd_buffer;
 } vulkan_engine_t;
 
 /**
