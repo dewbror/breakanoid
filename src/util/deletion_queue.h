@@ -1,10 +1,5 @@
-/*
-  deletion_queue.h
-*/
-
 #ifndef DELETION_QUEUE_H_
 #define DELETION_QUEUE_H_
-#pragma once
 
 #include <stdbool.h>
 

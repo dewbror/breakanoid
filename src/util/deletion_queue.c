@@ -1,7 +1,3 @@
-/*
-  deletion_queue.c
-*/
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

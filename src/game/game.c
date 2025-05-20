@@ -1,6 +1,4 @@
-/*
-  game.c
-*/
+#include <stdbool.h>
 
 #include "logger.h"
 #include "vulkan/vulkan_engine.h"

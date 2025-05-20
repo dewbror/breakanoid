@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vulkan/vulkan_core.h>
-
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_vulkan.h>
 

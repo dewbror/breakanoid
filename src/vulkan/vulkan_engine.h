@@ -1,15 +1,10 @@
-/*
-  vulkan_engine.h
-*/
-
 #ifndef VULKAN_ENGINE_H_
 #define VULKAN_ENGINE_H_
-#include "util/deletion_queue.h"
-#pragma once
 
 #include <stdbool.h>
-
 #include <vulkan/vulkan_core.h>
+
+#include "util/deletion_queue.h"
 
 #define FRAMES_IN_FLIGHT 2
 

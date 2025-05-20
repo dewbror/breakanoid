@@ -1,9 +1,5 @@
-/*
-  SDL_backend.c
-*/
-
 #include <stdio.h>
-
+#include <stdbool.h>
 #include <SDL3/SDL_init.h>
 
 #include "logger.h"

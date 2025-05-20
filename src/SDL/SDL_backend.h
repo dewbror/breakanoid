@@ -1,10 +1,5 @@
-/*
-  SDL_backend.h
-*/
-
 #ifndef SDL_BACKEND_H_
 #define SDL_BACKEND_H_
-#pragma once
 
 #include <stdbool.h>
 

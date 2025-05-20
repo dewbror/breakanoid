@@ -1,10 +1,5 @@
-/*
-  logger.h
-*/
-
 #ifndef LOGGER_H_
 #define LOGGER_H_
-#pragma once
 
 #include "config.h"
 
