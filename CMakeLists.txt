@@ -40,7 +40,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 # Check if cglm and stb exist, if either one doesnt then run the dependency clone script
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/cglm" OR NOT EXISTS "${CMAKE_SOURCE_DIR}/external/stb" OR NOT EXISTS "${CMAKE_SOURCE_DIR}/external/cmocka")
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/cglm" OR NOT EXISTS "${CMAKE_SOURCE_DIR}/external/stb" OR NOT EXISTS "${CMAKE_SOURCE_DIR}/external/cmocka" OR NOT EXISTS "${CMAKE_SOURCE_DIR}/external/cimgui")
     message(STATUS "Running clone script...")
     if(WIN32)
         execute_process(
