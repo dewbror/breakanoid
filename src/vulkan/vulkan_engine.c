@@ -10,9 +10,9 @@
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_vulkan.h>
 
-#include "version.h"
 #include "logger.h"
 #include "vulkan/vulkan_engine.h"
+#include "vulkan/vulkan_instance.h"
 #include "util/deletion_queue.h"
 #include "SDL/SDL_backend.h"
 
@@ -49,107 +49,6 @@ typedef struct swapchain_support_details_s {
     VkPresentModeKHR* present_modes;
     size_t present_modes_count;
 } swapchain_support_details_t;
-
-/**
- * Create a vulkan instance.
- *
- * \param[in] p_engine Pointer to the vulkan_engine.
- *
- * \return True if successful, false if failed.
- */
-static bool create_instance(vulkan_engine_t* p_engine);
-
-/**
- * Aquire the required instance layers. If enable_validation_layer = true, will add "VK_LAYER_KHRONOS_validation" to
- * the returned array. The returned array of required instance extensions is allocated
- * using malloc and must be freed using free.
- *
- * \param[in, out] p_required_layers_count The number of required layers.
- *
- * \return A pointer to a dynamically allocated array of strings listing the required layers.
- *
- * \note The currently only required layer is the validation layers if they are enabled, else there are none.
- */
-static const char** get_required_layers(uint32_t* p_required_layers_count);
-
-/**
- * Aquire the required instance extensions needed of vkCreateInstance, this is queried using
- * SDL_Vulkan_GetInstanceExtensions. If enable_validation_layer = true, will add VK_EXT_DEBUG_UTILS_EXTENSION_NAME to
- * the returned array of required instance extensions. The returned array of required instance extensions is allocated
- * using malloc and must be freed using free.
- *
- * \param[in, out] p_required_extensions_count The number of required extensions.
- *
- * \return A pointer to a dynamically allocated array of strings listing the required extensions.
- */
-static const char** get_required_extensions(uint32_t* p_required_extensions_count);
-
-/**
- * Populate the VkDebugUtilsMessengerCreateInfoEXT struct.
- *
- * \param[in, out] p_create_info Pointer to the VkDebugUtilsMessengerCreateInfoEXT to populate.
- */
-static void get_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* p_create_info);
-
-/**
- * A callback function to be used by the vulkan validation layers.
- *
- * More information about this function is available in comments inside the function definition.
- *
- * \param[in] messageSeverity Specifies the severity of the message.
- * \param[in] messageType Specifies the type of the message.
- * \param[in] p_callback_data Pointer to a VkDebugUtilsMessengerCallbackDataEXT struct containing the details of the
- * message itself. \param[in] p_user_data Pointer specified during the setup of the callback and allows you to pass
- * your own data to it.
- *
- * \return VK_FALSE.
- */
-VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-                                              VkDebugUtilsMessageTypeFlagsEXT message_type,
-                                              const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
-                                              void* p_user_data);
-
-/**
- * vkDestroyInstance wrapper to be used in the deletion_queue.
- *
- * \param[in] p_vulkan_instance Pointer to the vulkan_instance.
- */
-static void vkDestroyInstance_wrapper(void* p_vulkan_instance);
-
-/**
- * If enable_validation_layers = true, will populate a VkDebugUtilsMessengerCreateInfoEXT using
- * populate_debug_messenger_create_info and create a VkDebugUtilsMessengerEXT object using
- * vkCreateDebugUtilsMessengerEXT. The VkDebugUtilsMessengerCreateInfoEXT must be destroyed using
- * DestroyDebugUtilsMessengerEXT.
- *
- * \param[in] p_engine Pointer to the vulkan_engine.
- *
- * \return True if successful, false if failed.
- */
-static bool setup_debug_messenger(vulkan_engine_t* p_engine);
-
-/**
- * Proxy function for vkCreateDebugUtilsMessengerEXT.
- *
- * \return VkResult.
- */
-static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
-                                             const VkDebugUtilsMessengerCreateInfoEXT* p_create_info,
-                                             const VkAllocationCallbacks* p_allocator,
-                                             VkDebugUtilsMessengerEXT* p_debug_messenger);
-
-/**
- * Proxy function for vkDestroyDebugUtilsMessengerEXT.
- */
-static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger,
-                                          const VkAllocationCallbacks* p_allocator);
-
-/**
- * DestroyDebugUtilsMessengerEXT wrapper for use in deletion queue.
- *
- * \param[in] p_engine Pointer to vulkan engine.
- */
-static void DestroyDebugUtilsMessengerEXT_wrapper(void* p_engine);
 
 /**
  * vkDestroySurfaceKHR wrapper for use in deletion queue
@@ -376,14 +275,32 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     }
 
     // Create vulkan instance
-    if(!create_instance(p_engine)) {
+    if(!vulkan_instance_init(&p_engine->instance)) {
         LOG_ERROR("Failed to create vulkan instance");
         return false;
     }
 
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine->instance, vulkan_instance_destroy)) {
+        LOG_ERROR("Failed to queue deletion node");
+        vulkan_instance_destroy(p_engine->instance);
+        return false;
+    }
+
     // Setup debug messenger
-    if(!setup_debug_messenger(p_engine)) {
+    if(!vulkan_instance_debug_msg_init(p_engine->instance, &p_engine->debug_msg)) {
         LOG_ERROR("Failed to setup debug messenger");
+        return false;
+    }
+
+    vulkan_instance_debug_msg_del_struct_t* p_debug_msg_del_struct =
+        (vulkan_instance_debug_msg_del_struct_t*)malloc(sizeof(vulkan_instance_debug_msg_del_struct_t));
+
+    p_debug_msg_del_struct->instance  = p_engine->instance;
+    p_debug_msg_del_struct->debug_msg = p_engine->debug_msg;
+
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_debug_msg_del_struct, vulkan_instance_debug_msg_destroy)) {
+        LOG_ERROR("Failed to queue deletion callback");
+        vulkan_instance_debug_msg_destroy(p_debug_msg_del_struct);
         return false;
     }
 

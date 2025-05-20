@@ -48,7 +48,7 @@ typedef struct vulkan_engine_s {
     struct SDL_Window* p_SDL_window;
     VkExtent2D window_extent;
     VkInstance instance;
-    VkDebugUtilsMessengerEXT debug_messenger;
+    VkDebugUtilsMessengerEXT debug_msg;
     VkSurfaceKHR surface;
     VkPhysicalDevice physical_device;
     VkDevice device;
