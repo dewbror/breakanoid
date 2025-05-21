@@ -101,6 +101,12 @@ bool vulkan_instance_init(VkInstance* p_instance) {
     //     return false;
     // }
 
+    // Get the available vulkan driver version
+    uint32_t api_version = 0;
+    vkEnumerateInstanceVersion(&api_version);
+    LOG_DEBUG("Available Vulkan API version: %uv%u.%u.%u", VK_API_VERSION_VARIANT(api_version),
+              VK_API_VERSION_MAJOR(api_version), VK_API_VERSION_MINOR(api_version), VK_API_VERSION_PATCH(api_version));
+
     // Create application info
     VkApplicationInfo app_info = {0};
     // get_app_info(&app_indo);
@@ -110,12 +116,13 @@ bool vulkan_instance_init(VkInstance* p_instance) {
     app_info.applicationVersion = VK_MAKE_VERSION(break_VERSION_MAJOR, break_VERSION_MINOR, break_VERSION_PATCH);
     app_info.pEngineName        = "No Engine";
     app_info.engineVersion      = VK_MAKE_VERSION(0, 1, 0);
-    app_info.apiVersion         = VK_API_VERSION_1_3;
+    app_info.apiVersion         = api_version;
 
     // Create instance create info
     VkInstanceCreateInfo create_inst_info = {0};
-    create_inst_info.sType                = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    create_inst_info.pApplicationInfo     = &app_info;
+
+    create_inst_info.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    create_inst_info.pApplicationInfo = &app_info;
 
     uint32_t required_layers_count     = 0;
     uint32_t required_extensions_count = 0;
