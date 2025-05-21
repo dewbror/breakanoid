@@ -107,6 +107,12 @@ bool vulkan_instance_init(VkInstance* p_instance) {
     LOG_DEBUG("Available Vulkan API version: %uv%u.%u.%u", VK_API_VERSION_VARIANT(api_version),
               VK_API_VERSION_MAJOR(api_version), VK_API_VERSION_MINOR(api_version), VK_API_VERSION_PATCH(api_version));
 
+    // Must be greater than 1.3
+    if(api_version < VK_MAKE_VERSION(1, 3, 0)) {
+        LOG_ERROR("Vulkan driver version must be greater than 1.3");
+        return false;
+    }
+
     // Create application info
     VkApplicationInfo app_info = {0};
     // get_app_info(&app_indo);

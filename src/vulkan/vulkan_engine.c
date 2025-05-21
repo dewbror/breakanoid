@@ -448,9 +448,15 @@ static bool is_device_suitable(vulkan_engine_t* p_engine, VkPhysicalDevice devic
     vkGetPhysicalDeviceFeatures(device, &device_features);
 
     LOG_DEBUG("Device name: %s", device_properties.deviceName);
-    LOG_DEBUG("Device supported Vulkan version: %u.%u.%u.%u", VK_API_VERSION_VARIANT(device_properties.apiVersion),
+    LOG_DEBUG("Device supported Vulkan version: %uv%u.%u.%u", VK_API_VERSION_VARIANT(device_properties.apiVersion),
               VK_API_VERSION_MAJOR(device_properties.apiVersion), VK_API_VERSION_MINOR(device_properties.apiVersion),
               VK_API_VERSION_PATCH(device_properties.apiVersion));
+    
+    // Currently hard coded that the device must support >1.3
+    if(device_properties.apiVersion < VK_MAKE_VERSION(1,3,0)) {
+        LOG_ERROR("Device supported vulkan version must be greater than 1.3");
+        return false;
+    }
 
     // Check if graphics and present queue families are supported by device
     queue_family_indices_t q_fam_indices = {0};
