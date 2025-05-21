@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-/** w
+/**
  * A deletion node, holds a pointer to the resource which is to be deleted, a pointer to the function which will deletes
  * the resource and a pointer to the previous node in the queue.
  */

@@ -71,7 +71,7 @@ bool deletion_queue_flush(deletion_queue_t** pp_queue) {
         p_queue->p_last         = p_node->p_prev;
 
         // Call delete function on resource
-        if(p_node->delete_func) {
+        if(p_node->delete_func != NULL) {
             p_node->delete_func(p_node->p_resource);
         }
 
