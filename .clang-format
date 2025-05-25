@@ -1,14 +1,14 @@
 ---
 BasedOnStyle:  LLVM
-AlignAfterOpenBracket: Align
-AlignArrayOfStructures: None
+AlignAfterOpenBracket: AlwaysBreak
+AlignArrayOfStructures: Right
 AlignConsecutiveAssignments:
-  Enabled:          true
+  Enabled:          false
   AcrossEmptyLines: false
   AcrossComments:   false
-  AlignCompound:    true
-  AlignFunctionPointers: true
-  PadOperators:    true
+  AlignCompound:    false
+  AlignFunctionPointers: false
+  PadOperators:    false
 # AlignConsecutiveBitFields:
 #   Enabled:         false
 #   AcrossEmptyLines: false
@@ -20,21 +20,21 @@ AlignConsecutiveDeclarations:
   Enabled:          false
   AcrossEmptyLines: false
   AcrossComments:   false
-  AlignCompound:    true
-  AlignFunctionPointers: true
-  PadOperators:    true
+  AlignCompound:    false
+  AlignFunctionPointers: false
+  PadOperators:     false 
 AlignConsecutiveMacros:
-  Enabled:          true
+  Enabled:          false
   AcrossEmptyLines: false
   AcrossComments:   false
-  AlignCompound:    true
-  AlignFunctionPointers: true
-  PadOperators:    true
+  AlignCompound:    false
+  AlignFunctionPointers: false
+  PadOperators:     false
 AlignConsecutiveShortCaseStatements:
-  Enabled:          true
+  Enabled:          false
   AcrossEmptyLines: false
   AcrossComments:   false
-  AlignCaseColons:  true
+  AlignCaseColons:  false
 AlignEscapedNewlines: Right
 AlignOperands: Align
 AlignTrailingComments:
