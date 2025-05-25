@@ -106,12 +106,12 @@ static bool is_device_suitable(VkInstance instance, VkSurfaceKHR surface, VkPhys
     // ALL DEVICE PROP. AND FEAT. QUERY SHOULD BE MOVED TO OWN FUNCTION(S)
 
     // Query basic device properties
-    VkPhysicalDeviceVulkan14Properties properties14 = {0};
-    properties14.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_PROPERTIES;
+    // VkPhysicalDeviceVulkan14Properties properties14 = {0};
+    // properties14.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_PROPERTIES;
 
     VkPhysicalDeviceVulkan13Properties properties13 = {0};
     properties13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES;
-    properties13.pNext = &properties14;
+    // properties13.pNext = &properties14;
 
     VkPhysicalDeviceVulkan12Properties properties12 = {0};
     properties12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
@@ -141,12 +141,12 @@ static bool is_device_suitable(VkInstance instance, VkSurfaceKHR surface, VkPhys
     }
 
     // Query basic device features
-    VkPhysicalDeviceVulkan14Features features14 = {0};
-    features14.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES;
+    // VkPhysicalDeviceVulkan14Features features14 = {0};
+    // features14.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES;
 
     VkPhysicalDeviceVulkan13Features features13 = {0};
     features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-    features13.pNext = &features14;
+    // features13.pNext = &features14;
 
     VkPhysicalDeviceVulkan12Features features12 = {0};
     features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
