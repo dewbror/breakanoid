@@ -1,3 +1,4 @@
+#include <alloca.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vulkan/vulkan_core.h>
@@ -9,6 +10,7 @@
 #include "vulkan/vulkan_instance.h"
 #include "vulkan/vulkan_device.h"
 #include "vulkan/vulkan_swapchain.h"
+#include "vulkan/vulkan_image.h"
 #include "vulkan/vulkan_engine.h"
 #include "util/deletion_stack.h"
 #include "SDL/SDL_backend.h"
@@ -41,49 +43,6 @@ typedef struct surface_del_struct_s {
  * \param[in] p_void_surface_del_struct Pointer to a sufrace_del_struct_t containing the surface to be destroyed.
  */
 static void surface_destroy(void* p_void_surface_del_struct);
-
-/**
- * Creating image views for the swapchain images.
- *
- * \param[in] p_engine Pointer to the vulkna engine.
- *
- * \return True if all image views were successfully created, false otherwise.
- */
-static bool create_image_views(vulkan_engine_t* p_engine);
-
-/**
- * Create and image view for an image.
- *
- * \param[in] image The image for which the image view is created.
- * \param[in] format The format of the image view.
- * \param[in] aspect_flags
- * \param[in] mip_levels
- *
- * \return The image view.
- */
-static bool get_image_view(
-    vulkan_engine_t* p_engine, VkImageView image_view, VkImage image, VkFormat format, VkImageAspectFlags aspect_flags,
-    uint32_t mip_levels);
-/**
- * vkDestroyImageView wrapper for swapchin image view array
- *
- * \param[in] p_engine Pointer to the vulkan engine
- */
-// static void vkDestroyImageView_array_wrapper(void* p_engine);
-
-/**
- * vkDestroyImage and vkFreeMemory wrapper allocated images
- *
- * \param[in] p_engine Pointer to the vulkan engine
- */
-static void vkDestroyImage_FreeMemory_wrapper(void* p_engine);
-
-/**
- * vkDestroyImageView wrapper
- *
- * \param[in] p_engine Pointer to the vulkan engine
- */
-static void vkDestroyImageView_wrapper(void* p_engine);
 
 /**
  * Create the command pools/allocate command buffers for commands submitted to graphics queue and for immediate submits.
@@ -248,8 +207,24 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     }
 
     // Create image views
-    if(!create_image_views(p_engine)) {
-        LOG_ERROR("Failed to create swapchain image views\n");
+    // if(!create_image_views(p_engine)) {
+    //     LOG_ERROR("Failed to create swapchain image views\n");
+    //     return false;
+    // }
+
+    if(!vulkan_image_create(
+           p_engine->device, p_engine->physical_device, p_engine->window_extent.width, p_engine->window_extent.height,
+           &p_engine->draw_image)) {
+        LOG_ERROR("Failed to create image");
+        return false;
+    }
+
+    allocated_image_del_strut_t* p_allocated_image_del_struct = (allocated_image_del_strut_t*)malloc(sizeof(allocated_image_del_strut_t));
+    p_allocated_image_del_struct->device = p_engine->device;
+    p_allocated_image_del_struct->allocated_image = p_engine->draw_image;
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_allocated_image_del_struct, vulkan_image_destroy)) {
+        LOG_ERROR("Failed to push onto deletion stack");
+        vulkan_image_destroy(p_allocated_image_del_struct);
         return false;
     }
 
@@ -340,172 +315,6 @@ static void surface_destroy(void* p_void_surface_del_struct) {
     free(p_surface_del_struct);
     p_surface_del_struct = NULL;
     p_void_surface_del_struct = NULL;
-}
-
-static bool create_image_views(vulkan_engine_t* p_engine) {
-    if(p_engine == NULL) {
-        LOG_ERROR("create_image_views: p_engine is NULL");
-        return false;
-    }
-
-    // CREATE DRAW IMAGE
-
-    p_engine->draw_image.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-    VkExtent3D draw_image_extent = {p_engine->window_extent.width, p_engine->window_extent.height, 1};
-    p_engine->draw_image.extent = draw_image_extent;
-
-    VkImageUsageFlags draw_image_usage = 0;
-
-    draw_image_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    draw_image_usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    draw_image_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    draw_image_usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-    draw_image_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    VkImageCreateInfo img_info = {0};
-
-    img_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    img_info.imageType = VK_IMAGE_TYPE_2D;
-    img_info.extent = p_engine->draw_image.extent;
-    img_info.extent.depth = 1;
-    img_info.mipLevels = 1;
-    img_info.arrayLayers = 1;
-    img_info.format = p_engine->draw_image.format;      // Or your needed format
-    img_info.tiling = VK_IMAGE_TILING_OPTIMAL;          // Usually optimal for GPU use
-    img_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // = 0 default value
-    img_info.usage = draw_image_usage;                  // Example
-    img_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    img_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // = 0 default value
-
-    if(vkCreateImage(p_engine->device, &img_info, VK_NULL_HANDLE, &p_engine->draw_image.image) != VK_SUCCESS) {
-        LOG_ERROR("Failed to create draw image");
-        return false;
-    }
-
-    // For the draw image, we want to allocate it on the GPU local memory
-    // ALLOCATE MEMORY ON THE GPU
-
-    VkMemoryRequirements mem_req;
-    vkGetImageMemoryRequirements(p_engine->device, p_engine->draw_image.image, &mem_req);
-
-    VkMemoryAllocateInfo alloc_info = {0};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.allocationSize = mem_req.size;
-
-    // Find a device local memory type
-    uint32_t mem_type_index = 0;
-    VkPhysicalDeviceMemoryProperties mem_prop;
-    vkGetPhysicalDeviceMemoryProperties(p_engine->physical_device, &mem_prop);
-
-    for(uint32_t i = 0; i < mem_prop.memoryTypeCount; ++i) {
-        if((mem_req.memoryTypeBits & (1 << i)) &&
-           (mem_prop.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ==
-               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
-            mem_type_index = i;
-            break;
-        }
-    }
-
-    alloc_info.memoryTypeIndex = mem_type_index;
-
-    // VkDeviceMemory img_memory = NULL;
-    vkAllocateMemory(p_engine->device, &alloc_info, VK_NULL_HANDLE, &p_engine->draw_image.mem);
-
-    vkBindImageMemory(p_engine->device, p_engine->draw_image.image, p_engine->draw_image.mem, 0);
-
-    // CREATE DRAW IMAGE VIEW
-
-    VkImageViewCreateInfo img_view_info = {0};
-
-    img_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    img_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    img_view_info.image = p_engine->draw_image.image;
-    img_view_info.format = p_engine->draw_image.format;
-    img_view_info.subresourceRange.baseMipLevel = 0;
-    img_view_info.subresourceRange.levelCount = 1;
-    img_view_info.subresourceRange.baseArrayLayer = 0;
-    img_view_info.subresourceRange.layerCount = 1;
-    img_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    if(vkCreateImageView(p_engine->device, &img_view_info, VK_NULL_HANDLE, &p_engine->draw_image.image_view) !=
-       VK_SUCCESS) {
-        LOG_ERROR("Failed to create draw image view");
-        return false;
-    }
-
-    // ADD DESTRUCTION OF DRAW IMAGE AND DRAW IMAGE VIEW TO DELETION QUEUE
-
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyImage_FreeMemory_wrapper)) {
-        LOG_ERROR("Failed to queue deletion node");
-        vkDestroyImage_FreeMemory_wrapper(p_engine);
-        return false;
-    }
-
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyImageView_wrapper)) {
-        LOG_ERROR("Failed to queue deletion node");
-        vkDestroyImageView_wrapper(p_engine);
-        return false;
-    }
-
-    LOG_INFO("Image views created");
-    return true;
-}
-
-static bool get_image_view(
-    vulkan_engine_t* p_engine, VkImageView image_view, VkImage image, VkFormat format, VkImageAspectFlags aspect_flags,
-    uint32_t mip_levels) {
-    // TODO: Sanatize inputs
-
-    // Fill image view create info
-    VkImageViewCreateInfo view_info = {0};
-    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    view_info.image = image;
-
-    // The viewType and format fields specify how the image data should be interpreted. The viewType parameter
-    // allows you to treat images as 1D textures, 2D textures, 3D textures and cube maps.
-    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    view_info.format = format;
-
-    // The components field allows you to swizzle the color channels around. For example, you can map all of the
-    // channels to the red channel for a monochrome texture. You can also map constant values of 0 and 1 to a
-    // channel. In our case we’ll stick to the default mapping.
-    view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-    // The subresourceRange field describes what the image’s purpose is and which part of the image should be
-    // accessed. Our images will be used as color targets without any mipmapping levels or multiple layers.
-    view_info.subresourceRange.aspectMask = aspect_flags;
-    view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.levelCount = mip_levels;
-    view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = 1;
-
-    // Create image view
-    if(vkCreateImageView(p_engine->device, &view_info, VK_NULL_HANDLE, &image_view) != VK_SUCCESS) {
-        LOG_ERROR("Failed to create image view");
-        return false;
-    }
-
-    LOG_DEBUG("Image view created");
-    return true;
-}
-
-static void vkDestroyImage_FreeMemory_wrapper(void* p_engine) {
-    LOG_DEBUG("Callback: vkDestroyImage_FreeMemory_wrapper");
-    vkDestroyImage(
-        ((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->draw_image.image,
-        VK_NULL_HANDLE); // Destroy the VkImage
-    vkFreeMemory(
-        ((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->draw_image.mem,
-        VK_NULL_HANDLE); // Free the device memory
-}
-
-static void vkDestroyImageView_wrapper(void* p_engine) {
-    LOG_DEBUG("Callback: vkDestroyImageView_wrapper");
-    vkDestroyImageView(
-        ((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->draw_image.image_view, VK_NULL_HANDLE);
 }
 
 static bool create_commands(vulkan_engine_t* p_engine) {

@@ -46,4 +46,16 @@ typedef struct vulkan_swapchain_s {
     uint32_t images_count;
 } vulkan_swapchain_t;
 
+/**
+ * Struct containing all data relevant for an image allocated on the physical device
+ */
+typedef struct allocated_image_s {
+    VkImage image;
+    VkImageView image_view;
+    // VmaAllocation alloc;
+    VkDeviceMemory mem;
+    VkExtent3D extent;
+    VkFormat format;
+} allocated_image_t;
+
 #endif // VULKAN_TYPES_H_

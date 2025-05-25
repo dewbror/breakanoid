@@ -6,6 +6,7 @@ A Vulkan + SDL3 project.
 TODO
 ----
 - Add NULL checks to vulkan_swapchain.c.
+- Add NULL checks to vulkan_image.c.
 - Update THIRD_PARTY_LICENSES.txt.
 - Fix "clone_dependencies.bat".
 - Improve the "How to Build" section.

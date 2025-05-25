@@ -8,14 +8,7 @@
 
 #define FRAMES_IN_FLIGHT 2
 
-typedef struct allocated_image_s {
-    VkImage image;
-    VkImageView image_view;
-    // VmaAllocation alloc;
-    VkDeviceMemory mem;
-    VkExtent3D extent;
-    VkFormat format;
-} allocated_image_t;
+
 
 typedef struct frame_data_s {
     VkCommandPool cmd_pool;
@@ -40,7 +33,7 @@ typedef struct vulkan_engine_s {
     VkDevice device;
     queue_family_data_t queues;
     VkSampleCountFlagBits msaa_samples;
-    struct vulkan_swapchain_s vulkan_swapchain;
+    vulkan_swapchain_t vulkan_swapchain;
     allocated_image_t draw_image;
     long frame_count;
     frame_data_t frames[FRAMES_IN_FLIGHT];
