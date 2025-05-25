@@ -5,8 +5,9 @@ A Vulkan + SDL3 project.
 
 TODO
 ----
-- Fix "clone_dependencies.bat"
-- Improve the "How to Build" section
+- Change name of deletion_queue to deletion_stack.
+- Fix "clone_dependencies.bat".
+- Improve the "How to Build" section.
 
 Dependencies
 ------------
