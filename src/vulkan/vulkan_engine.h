@@ -5,6 +5,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "util/deletion_queue.h"
+#include "vulkan/vulkan_types.h"
 
 #define FRAMES_IN_FLIGHT 2
 
@@ -47,10 +48,7 @@ typedef struct vulkan_engine_s {
     VkSurfaceKHR surface;
     VkPhysicalDevice physical_device;
     VkDevice device;
-    VkQueue graphics_queue;
-    uint32_t graphics_queue_index;
-    VkQueue present_queue;
-    uint32_t present_queue_index;
+    queue_family_data_t queues;
     VkSampleCountFlagBits msaa_samples;
     VkSwapchainKHR swapchain;
     swapchain_images_t swapchain_images;
@@ -61,6 +59,7 @@ typedef struct vulkan_engine_s {
     frame_data_t frames[FRAMES_IN_FLIGHT];
     VkCommandPool imm_cmd_pool;
     VkCommandBuffer imm_cmd_buffer;
+    VkFence imm_fence;
 } vulkan_engine_t;
 
 /**

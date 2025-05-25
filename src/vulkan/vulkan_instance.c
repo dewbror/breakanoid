@@ -9,10 +9,6 @@
 #include "logger.h"
 #include "vulkan/vulkan_instance.h"
 
-static const uint32_t device_extensions_count = 2;
-static const char* const device_extensions[2] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-                                                 VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME};
-
 static const uint32_t instance_layers_count = 0;
 
 #ifdef NDEBUG
@@ -24,32 +20,32 @@ static const bool enable_validation_layers = true;
 /**
  * Aquire the required instance layers. If enable_validation_layer = true, will add "VK_LAYER_KHRONOS_validation" to
  * the returned array. The returned array of required instance extensions is allocated
- * using malloc and must be freed using free.
+ * using malloc and must be freed using.
  *
- * \param[in, out] p_required_layers_count The number of required layers.
+ * \param[out] p_required_layers_count The number of required layers.
  *
- * \return A pointer to a dynamically allocated array of strings listing the required layers.
+ * \return Pointer to a dynamically allocated array of strings listing the required layers.
  *
  * \note The currently only required layer is the validation layers if they are enabled, else there are none.
  */
 static const char** get_required_layers(uint32_t* p_required_layers_count);
 
 /**
- * Aquire the required instance extensions needed of vkCreateInstance, this is queried using
+ * Aquire the required instance extensions needed in vkCreateInstance, this is queried using
  * SDL_Vulkan_GetInstanceExtensions. If enable_validation_layer = true, will add VK_EXT_DEBUG_UTILS_EXTENSION_NAME to
  * the returned array of required instance extensions. The returned array of required instance extensions is allocated
- * using malloc and must be freed using free.
+ * using malloc and must be freed using.
  *
- * \param[in, out] p_required_extensions_count The number of required extensions.
+ * \param[out] p_required_extensions_count The number of required extensions.
  *
- * \return A pointer to a dynamically allocated array of strings listing the required extensions.
+ * \return Pointer to a dynamically allocated array of strings listing the required extensions.
  */
 static const char** get_required_extensions(uint32_t* p_required_extensions_count);
 
 /**
- * Populate the VkDebugUtilsMessengerCreateInfoEXT struct.
+ * Get the VkDebugUtilsMessengerCreateInfoEXT struct.
  *
- * \param[in, out] p_create_info Pointer to the VkDebugUtilsMessengerCreateInfoEXT to populate.
+ * \param[out] p_create_info Pointer to the VkDebugUtilsMessengerCreateInfoEXT to populate.
  */
 static void get_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* p_create_info);
 
@@ -66,26 +62,24 @@ static void get_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* 
  *
  * \return VK_FALSE.
  */
-static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-                                                     VkDebugUtilsMessageTypeFlagsEXT message_type,
-                                                     const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
-                                                     void* p_user_data);
+static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type,
+    const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data, void* p_user_data);
 
 /**
  * Proxy function for vkCreateDebugUtilsMessengerEXT.
  *
  * \return VkResult.
  */
-static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
-                                             const VkDebugUtilsMessengerCreateInfoEXT* p_create_info,
-                                             const VkAllocationCallbacks* p_allocator,
-                                             VkDebugUtilsMessengerEXT* p_debug_messenger);
+static VkResult CreateDebugUtilsMessengerEXT(
+    VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* p_create_info,
+    const VkAllocationCallbacks* p_allocator, VkDebugUtilsMessengerEXT* p_debug_messenger);
 
 /**
  * Proxy function for vkDestroyDebugUtilsMessengerEXT.
  */
-static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger,
-                                          const VkAllocationCallbacks* p_allocator);
+static void DestroyDebugUtilsMessengerEXT(
+    VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger, const VkAllocationCallbacks* p_allocator);
 
 bool vulkan_instance_init(VkInstance* p_instance) {
     // Check if p_engine is NULL
@@ -104,84 +98,82 @@ bool vulkan_instance_init(VkInstance* p_instance) {
     // Get the available vulkan driver version
     uint32_t api_version = 0;
     vkEnumerateInstanceVersion(&api_version);
-    LOG_DEBUG("Available Vulkan API version: %uv%u.%u.%u", VK_API_VERSION_VARIANT(api_version),
-              VK_API_VERSION_MAJOR(api_version), VK_API_VERSION_MINOR(api_version), VK_API_VERSION_PATCH(api_version));
+    LOG_DEBUG(
+        "Available Vulkan API version: %uv%u.%u.%u", VK_API_VERSION_VARIANT(api_version),
+        VK_API_VERSION_MAJOR(api_version), VK_API_VERSION_MINOR(api_version), VK_API_VERSION_PATCH(api_version));
 
     // Must be greater than 1.3
     if(api_version < VK_MAKE_VERSION(1, 3, 0)) {
-        LOG_ERROR("Vulkan driver version must be greater than 1.3");
+        LOG_ERROR("Vulkan driver version 1.3+ required");
         return false;
     }
 
     // Create application info
     VkApplicationInfo app_info = {0};
-    // get_app_info(&app_indo);
 
-    app_info.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pApplicationName   = "Breakanoid";
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pApplicationName = "Breakanoid";
     app_info.applicationVersion = VK_MAKE_VERSION(break_VERSION_MAJOR, break_VERSION_MINOR, break_VERSION_PATCH);
-    app_info.pEngineName        = "No Engine";
-    app_info.engineVersion      = VK_MAKE_VERSION(0, 1, 0);
-    app_info.apiVersion         = api_version;
+    app_info.pEngineName = "No Engine";
+    app_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
+    app_info.apiVersion = api_version;
 
     // Create instance create info
     VkInstanceCreateInfo create_inst_info = {0};
 
-    create_inst_info.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    create_inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_inst_info.pApplicationInfo = &app_info;
 
-    uint32_t required_layers_count     = 0;
+    uint32_t required_layers_count = 0;
     uint32_t required_extensions_count = 0;
 
     // Query required instance layers
-    const char** required_layers         = get_required_layers(&required_layers_count);
-    create_inst_info.enabledLayerCount   = required_layers_count;
+    const char** required_layers = get_required_layers(&required_layers_count);
+    create_inst_info.enabledLayerCount = required_layers_count;
     create_inst_info.ppEnabledLayerNames = (const char* const*)required_layers;
 
     // Query required instance extensions (From SDL_Vulkan_GetInstanceExtensions)
-    const char** required_extensions         = get_required_extensions(&required_extensions_count);
-    create_inst_info.enabledExtensionCount   = required_extensions_count;
+    const char** required_extensions = get_required_extensions(&required_extensions_count);
+    create_inst_info.enabledExtensionCount = required_extensions_count;
     create_inst_info.ppEnabledExtensionNames = (const char* const*)required_extensions;
 
-    VkDebugUtilsMessengerCreateInfoEXT debug_create_info    = {0};
+    VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {0};
     VkLayerSettingsCreateInfoEXT layer_settings_create_info = {0};
 
     // Enable non-default validation layer settings
-    const VkBool32 setting_validate_sync           = VK_TRUE;
+    const VkBool32 setting_validate_sync = VK_TRUE;
     const VkBool32 setting_validate_best_practices = VK_TRUE;
-    const VkBool32 setting_enable_message_limit    = VK_TRUE;
-    const int32_t setting_duplicate_message_limit  = 3;
+    const VkBool32 setting_enable_message_limit = VK_TRUE;
+    const int32_t setting_duplicate_message_limit = 3;
 
     if(enable_validation_layers) {
-        const VkLayerSettingEXT settings[] = {{"VK_LAYER_KHRONOS_validation", "validate_sync",
-                                               VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_validate_sync},
-                                              {"VK_LAYER_KHRONOS_validation", "validate_best_practices",
-                                               VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_validate_best_practices},
-                                              {"VK_LAYER_KHRONOS_validation", "enable_message_limit",
-                                               VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_enable_message_limit},
-                                              {"VK_LAYER_KHRONOS_validation", "duplicate_message_limit",
-                                               VK_LAYER_SETTING_TYPE_INT32_EXT, 1, &setting_duplicate_message_limit}};
+        const VkLayerSettingEXT settings[] = {
+            {"VK_LAYER_KHRONOS_validation",           "validate_sync", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
+             &setting_validate_sync          },
+            {"VK_LAYER_KHRONOS_validation", "validate_best_practices", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
+             &setting_validate_best_practices},
+            {"VK_LAYER_KHRONOS_validation",    "enable_message_limit", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
+             &setting_enable_message_limit   },
+            {"VK_LAYER_KHRONOS_validation", "duplicate_message_limit",  VK_LAYER_SETTING_TYPE_INT32_EXT, 1,
+             &setting_duplicate_message_limit}
+        };
 
-        layer_settings_create_info.sType        = VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT;
+        layer_settings_create_info.sType = VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT;
         layer_settings_create_info.settingCount = 2;
-        layer_settings_create_info.pSettings    = settings;
+        layer_settings_create_info.pSettings = settings;
 
-        // Populate debug messenger create info
+        // get debug messenger create info
         get_debug_messenger_create_info(&debug_create_info);
 
         // The current order of the pNext chain of extenion structs is
-        //      instance -> debug_utils -> layer_settings
-        //
         // The order of the pNext chain should not matter. However, using the reverse order:
         //      instance -> layer_settings -> debug_utils
-        //
-        // causes the validation layers to issue warnings that seem incorrect.
 
-        // Extend InstanceCreateInfo struct with LayerSettignsCreateInfo struct
-        create_inst_info.pNext = &debug_create_info;
+        // create_inst_info.pNext = &debug_create_info;
+        create_inst_info.pNext = &layer_settings_create_info;
 
-        // Extend LayerSettignsCreateInfo struct with DebugUtilsMessengerCreateInfo struct
-        layer_settings_create_info.pNext = &layer_settings_create_info;
+        // debug_create_info.pNext = &layer_settings_create_info;
+        layer_settings_create_info.pNext = &debug_create_info;
     }
 
     uint32_t req_inst_layers_count = 0;
@@ -203,16 +195,19 @@ bool vulkan_instance_init(VkInstance* p_instance) {
     return true;
 }
 
-void vulkan_instance_destroy(void* p_del_resource) {
+void vulkan_instance_destroy(void* p_void_instance) {
     LOG_DEBUG("Callback: vulkan_instance_destroy");
-    if(p_del_resource == NULL) {
-        LOG_ERROR("vulkan_instance_destroy: p_del_resource is NULL");
+
+    // NULL check
+    if(p_void_instance == NULL) {
+        LOG_ERROR("vulkan_instance_destroy: instance is NULL");
         return;
     }
 
     // Cast pointer
-    VkInstance instance = (VkInstance)p_del_resource;
+    VkInstance instance = (VkInstance)p_void_instance;
 
+    // Destroy instance
     vkDestroyInstance(instance, VK_NULL_HANDLE);
 }
 
@@ -235,8 +230,9 @@ static const char** get_required_layers(uint32_t* p_required_instance_layers_cou
     VkLayerProperties* available_layers =
         (VkLayerProperties*)malloc(available_layers_count * sizeof(VkLayerProperties));
     if(available_layers == NULL) {
-        LOG_ERROR("Failed to allocate memory of size %lu: %s", available_layers_count * sizeof(VkLayerProperties),
-                  strerror(errno));
+        LOG_ERROR(
+            "Failed to allocate memory of size %lu: %s", available_layers_count * sizeof(VkLayerProperties),
+            strerror(errno));
         return NULL;
     }
 
@@ -301,7 +297,6 @@ static const char** get_required_layers(uint32_t* p_required_instance_layers_cou
     // Set the layers count
     *p_required_instance_layers_count = allocated_layers_count;
 
-    // Return the layer array as immutable (const char* const*)
     // NOTE: THIS ARRAY IS ALLOCATED ON THE HEAP AND MUST BE FREED
     return layers;
 }
@@ -317,8 +312,9 @@ static const char** get_required_extensions(uint32_t* p_required_extensions_coun
     VkExtensionProperties* available_extensions =
         (VkExtensionProperties*)malloc(available_extensions_count * sizeof(VkExtensionProperties));
     if(available_extensions == NULL) {
-        LOG_ERROR("Failed to allocate memory of size %lu: %s",
-                  available_extensions_count * sizeof(VkExtensionProperties), strerror(errno));
+        LOG_ERROR(
+            "Failed to allocate memory of size %lu: %s", available_extensions_count * sizeof(VkExtensionProperties),
+            strerror(errno));
         return NULL;
     }
 
@@ -354,8 +350,8 @@ static const char** get_required_extensions(uint32_t* p_required_extensions_coun
     const char** extensions = (const char**)malloc(allocated_extensions_count * sizeof(char*));
     if(extensions == NULL) {
         // Handle memory allocation failure
-        LOG_ERROR("Failed to allocate array of size %lu: %s", allocated_extensions_count * sizeof(char*),
-                  strerror(errno));
+        LOG_ERROR(
+            "Failed to allocate array of size %lu: %s", allocated_extensions_count * sizeof(char*), strerror(errno));
         return NULL;
     }
 
@@ -412,14 +408,13 @@ static void get_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* 
                                  VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                  VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     p_create_info->pfnUserCallback = debug_callback;
-    p_create_info->pUserData       = VK_NULL_HANDLE;
-    p_create_info->pNext           = VK_NULL_HANDLE;
+    p_create_info->pUserData = VK_NULL_HANDLE;
+    p_create_info->pNext = VK_NULL_HANDLE;
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-                                              VkDebugUtilsMessageTypeFlagsEXT message_type,
-                                              const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
-                                              void* p_user_data) {
+VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type,
+    const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data, void* p_user_data) {
     // UNUSED
     (void)message_severity;
     (void)message_type;
@@ -507,26 +502,42 @@ bool vulkan_instance_debug_msg_init(VkInstance instance, VkDebugUtilsMessengerEX
     return true;
 }
 
-void vulkan_instance_debug_msg_destroy(void* p_del_struct) {
+void vulkan_instance_debug_msg_destroy(void* p_void_debug_msg_del_struct) {
     LOG_DEBUG("Callback: vulkan_instance_debug_messenger_destroy");
 
     // The VkDebugUtilsMessengerEXT object also needs to be cleaned up with a call to
     // vkDestroyDebugUtilsMessengerEXT, which we also need to aquire via a proxy function.
     // We call the detroyer in cleanup.
 
+    // NULL check
+    if(p_void_debug_msg_del_struct == NULL) {
+        LOG_ERROR("vulkan_instance_debug_msg_destroy: debug_msg_del_struct is NULL");
+        return;
+    }
+
     // Cast struct pointer
     vulkan_instance_debug_msg_del_struct_t* p_debug_msg_del_struct =
-        (vulkan_instance_debug_msg_del_struct_t*)p_del_struct;
+        (vulkan_instance_debug_msg_del_struct_t*)p_void_debug_msg_del_struct;
 
+    if(p_debug_msg_del_struct->instance == NULL) {
+        LOG_ERROR("vulkan_instance_destroy: instance is NULL");
+        return;
+    }
+
+    if(p_debug_msg_del_struct->debug_msg == NULL) {
+        LOG_ERROR("vulkan_instance_destroy: debug_msg is NULL")
+    }
+
+    // Destroy debug messenger
     DestroyDebugUtilsMessengerEXT(p_debug_msg_del_struct->instance, p_debug_msg_del_struct->debug_msg, VK_NULL_HANDLE);
 
-    free(p_del_struct);
+    // Free deletion struct pointer
+    free(p_void_debug_msg_del_struct);
 }
 
-static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
-                                             const VkDebugUtilsMessengerCreateInfoEXT* p_create_info,
-                                             const VkAllocationCallbacks* p_allocator,
-                                             VkDebugUtilsMessengerEXT* p_debug_messenger) {
+static VkResult CreateDebugUtilsMessengerEXT(
+    VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* p_create_info,
+    const VkAllocationCallbacks* p_allocator, VkDebugUtilsMessengerEXT* p_debug_messenger) {
     // Look up address of vkCreateDebugUtilsMessengerEXT
     PFN_vkCreateDebugUtilsMessengerEXT func =
         (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
@@ -538,8 +549,8 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
     }
 }
 
-static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger,
-                                          const VkAllocationCallbacks* p_allocator) {
+static void DestroyDebugUtilsMessengerEXT(
+    VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger, const VkAllocationCallbacks* p_allocator) {
     // Make sure that this function is either a static class function or a function outside the class.
 
     // Look up address of vkDestroyDebugUtilsMessengerEXT

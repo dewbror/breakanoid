@@ -7,4 +7,5 @@
 #else
 #define FORMAT_ATTR(format_index, first_arg_index) // No-op for MSVC and other compilers
 #endif
+
 #endif // CONFIG_H_

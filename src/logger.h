@@ -4,8 +4,8 @@
 #include "config.h"
 
 #define LOG_LEVEL_ERROR 0
-#define LOG_LEVEL_WARN  1
-#define LOG_LEVEL_INFO  2
+#define LOG_LEVEL_WARN 1
+#define LOG_LEVEL_INFO 2
 #define LOG_LEVEL_DEBUG 3
 #define LOG_LEVEL_TRACE 4
 

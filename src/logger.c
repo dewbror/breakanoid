@@ -6,23 +6,23 @@
 
 #define TIMEBUF_MAX 32
 
-#define COLOR_RED    "\x1b[31m"
+#define COLOR_RED "\x1b[31m"
 #define COLOR_YELLOW "\x1b[33m"
-#define COLOR_GREEN  "\x1b[32m"
-#define COLOR_BLUE   "\x1b[34m"
+#define COLOR_GREEN "\x1b[32m"
+#define COLOR_BLUE "\x1b[34m"
 // #define COLOR_MAGENTA "\x1b[35m"
-#define COLOR_CYAN  "\x1b[36m"
+#define COLOR_CYAN "\x1b[36m"
 #define COLOR_RESET "\x1b[0m"
 
-static bool logging_to_file       = true;
-static FILE* fp_log               = NULL;
-static const char* log_file_name  = NULL;
+static bool logging_to_file = true;
+static FILE* fp_log = NULL;
+static const char* log_file_name = NULL;
 static const char* const levels[] = {"[ERROR] ", "[WARN] ", "[INFO] ", "[DEBUG] ", "[TRACE] "};
 
 void logger_open(const char* file_name) {
     // If file_name == NULL, set logging to stderr
     if(file_name == NULL) {
-        fp_log          = stderr;
+        fp_log = stderr;
         logging_to_file = false;
         return;
     }
@@ -34,6 +34,7 @@ void logger_open(const char* file_name) {
         return;
     }
 
+    // Set the name of the log file
     log_file_name = file_name;
     LOG_INFO("Log file opened: %s", log_file_name);
 }
@@ -52,14 +53,15 @@ void logger_close(void) {
             // Handle fclose error
             return;
         }
+
         // Set free pointer to NULL
         fp_log = NULL;
     }
 }
 
 void logger__msg(int level, const char* file, int line, const char* fmt, ...) {
-    int ret           = 0;
-    size_t ret_LU     = 0;
+    int ret = 0;
+    size_t ret_LU = 0;
     const char* color = NULL;
 
     // Set the color based on the log level of the message
@@ -85,7 +87,7 @@ void logger__msg(int level, const char* file, int line, const char* fmt, ...) {
     }
 
     // Get the current time
-    time_t now        = time(NULL);
+    time_t now = time(NULL);
     struct tm* tm_now = localtime(&now);
 
     // Format time string
@@ -110,7 +112,8 @@ void logger__msg(int level, const char* file, int line, const char* fmt, ...) {
     // UNUSED
     (void)file;
     (void)line;
-
+    
+    // Print date and time
     if(logging_to_file) {
         ret = fprintf(fp_log, "%s %s", timebuf, levels[level]);
         if(ret < 0) {
@@ -124,11 +127,15 @@ void logger__msg(int level, const char* file, int line, const char* fmt, ...) {
             return;
         }
     }
+    
+    // Print formatted string
     ret = vfprintf(fp_log, fmt, args);
     if(ret < 0) {
         // Handle vfprintf error
         return;
     }
+
+    // Print newline
     ret = fprintf(fp_log, "\n");
     if(ret < 0) {
         // Handle fprintf error
