@@ -36,27 +36,16 @@ static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR* p_presen
  * larger than the screen coordinates. SDL_GetWindowSizeInPixels should get the actual pixel size and not the screen
  * coordiantes.
  *
- * \param[in] p_engine Pointer to the vulkan_engine.
+ * \param[in] p_window Pointer to the SDL window.
  * \param[in] capabilities The swapchain surface capabilities.
  *
  * \return The chosen swapchain extent. If the SDL_GetWindowSizeInPixels the extent will have 0 width and height.
  */
 static VkExtent2D choose_swapchain_extent(SDL_Window* p_window, VkSurfaceCapabilitiesKHR capabilities);
 
-/**
- * vkDestroySwapchainKHR for use in deletion queue.
- *
- * \param[in] p_engine Pointer to the vulkan engine
- */
-// static void vkDestroySwapchainKHR_wrapper(void* p_engine);
-
 bool vulkan_swapchain_init(
     VkSurfaceKHR surface, SDL_Window* p_window, VkPhysicalDevice physical_device, VkDevice device,
     vulkan_swapchain_t* p_vulkan_swapchain) {
-    // if(p_engine == NULL) {
-    //     LOG_ERROR("create_swapchain: p_engine is NULL");
-    //     return false;
-    // }
 
     // Swapchain support has already been checked but we run this function again to retrieve the swapchain support
     // details (the surface formats and present modes)
@@ -295,12 +284,6 @@ void vulkan_swapchain_destroy(void* p_void_vulkan_swapchain_del_struct) {
     p_vulkan_swapchain_del_struct = NULL;
     p_void_vulkan_swapchain_del_struct = NULL;
 }
-
-// static void vkDestroySwapchainKHR_wrapper(void* p_engine) {
-//     LOG_DEBUG("Callback: vkDestroySwapchainKHR_wrapper");
-//     vkDestroySwapchainKHR(
-//         ((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->swapchain, VK_NULL_HANDLE);
-// }
 
 static VkSurfaceFormatKHR choose_swapchain_surface_format(VkSurfaceFormatKHR* p_formats, size_t formats_count) {
     // For the color space we’ll use sRGB, which is pretty much the standard color space for viewing and printing

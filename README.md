@@ -5,7 +5,7 @@ A Vulkan + SDL3 project.
 
 TODO
 ----
-- Change name of deletion_queue to deletion_stack.
+- Add NULL checks to vulkan_swapchain.c.
 - Fix "clone_dependencies.bat".
 - Improve the "How to Build" section.
 

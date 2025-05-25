@@ -28,13 +28,19 @@ static const bool enable_validation_layers = true;
 #endif
 
 /**
- * vkDestroySurfaceKHR wrapper for use in deletion queue
- *
- * \param[in] p_engine Pointer to vulkan engine.
- */
-static void vkDestroySurfaceKHR_wrapper(void* p_engine);
+ * A struct for deleting the vulkan render surface.
+ * */
+typedef struct surface_del_struct_s {
+    VkInstance instance;
+    VkSurfaceKHR surface;
+} surface_del_struct_t;
 
-static void free_wrapper(void* p_mem);
+/**
+ * \brief Destroy vulkan render surface
+ *
+ * \param[in] p_void_surface_del_struct Pointer to a sufrace_del_struct_t containing the surface to be destroyed.
+ */
+static void surface_destroy(void* p_void_surface_del_struct);
 
 /**
  * Creating image views for the swapchain images.
@@ -196,7 +202,12 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
         return false;
     }
     LOG_INFO("Vulkan rendering surface created");
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroySurfaceKHR_wrapper)) {
+
+    surface_del_struct_t* p_surface_del_struct = (surface_del_struct_t)malloc(sizeof(surface_del_struct_t));
+    p_surface_del_struct->instance = p_engine->instance;
+    p_surface_del_struct->surface = p_engine->surface;
+
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_surface_del_struct, surface_destroy)) {
         LOG_ERROR("Failed to push deletion node");
         return false;
     }
@@ -302,14 +313,33 @@ bool vulkan_engine_destroy(vulkan_engine_t* p_engine) {
     return true;
 }
 
-static void vkDestroySurfaceKHR_wrapper(void* p_engine) {
-    LOG_DEBUG("Callback: vkDestroySurfaceKHR_wrapper");
-    vkDestroySurfaceKHR(((vulkan_engine_t*)p_engine)->instance, ((vulkan_engine_t*)p_engine)->surface, VK_NULL_HANDLE);
-}
+static void surface_destroy(void* p_void_surface_del_struct) {
+    LOG_DEBUG("Callback: surface_destroy");
 
-static void free_wrapper(void* p_mem) {
-    LOG_DEBUG("Callback: free_wrapper");
-    free(p_mem);
+    if(p_void_surface_del_struct == NULL) {
+        LOG_ERROR("surface_destroy: sufrace_deL-struct is NULL");
+        return;
+    }
+
+    // Cast pointer
+    surface_del_struct_t* p_surface_del_struct = (surface_del_struct_t*)p_void_surface_del_struct;
+
+    if(p_surface_del_struct->instance == NULL) {
+        LOG_ERROR("surface_destroy: instance is NULL");
+        return;
+    }
+
+    if(p_surface_del_struct->surface == NULL) {
+        LOG_ERROR("surface_destroy: surface is NULL");
+        return;
+    }
+
+    // Destroy surface
+    vkDestroySurfaceKHR(p_surface_del_struct->instance, p_surface_del_struct->surface, VK_NULL_HANDLE);
+
+    free(p_surface_del_struct);
+    p_surface_del_struct = NULL;
+    p_void_surface_del_struct = NULL;
 }
 
 static bool create_image_views(vulkan_engine_t* p_engine) {
