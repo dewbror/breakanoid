@@ -8,15 +8,6 @@
 
 #define FRAMES_IN_FLIGHT 2
 
-/**
- * A struct containing a pointer to an array of VkImages and the size of the array in number of VkImages.
- */
-typedef struct swapchain_images_s {
-    VkImage* p_images;
-    VkImageView* p_image_views;
-    uint32_t images_count;
-} swapchain_images_t;
-
 typedef struct allocated_image_s {
     VkImage image;
     VkImageView image_view;
@@ -49,10 +40,7 @@ typedef struct vulkan_engine_s {
     VkDevice device;
     queue_family_data_t queues;
     VkSampleCountFlagBits msaa_samples;
-    VkSwapchainKHR swapchain;
-    swapchain_images_t swapchain_images;
-    VkFormat swapchain_image_format; // Move to swapchain_images_t?
-    VkExtent2D swapchain_extent;     // Move to swapchain_images_t?
+    struct vulkan_swapchain_s vulkan_swapchain;
     allocated_image_t draw_image;
     long frame_count;
     frame_data_t frames[FRAMES_IN_FLIGHT];

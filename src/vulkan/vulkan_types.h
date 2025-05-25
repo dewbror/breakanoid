@@ -30,4 +30,20 @@ typedef struct swapchain_support_details_s {
     size_t present_modes_count;
 } swapchain_support_details_t;
 
+
+/**
+ * A struct containing everything relevant for the swapchain.
+ */
+typedef struct vulkan_swapchain_s {
+    // Vulkan opaque pointers 8/4 bytes
+    VkSwapchainKHR swapchain;
+    VkImage* p_images;
+    VkImageView* p_image_views;
+    VkFormat format;
+    VkExtent2D extent;
+
+    // uint32_t 4 bytes
+    uint32_t images_count;
+} vulkan_swapchain_t;
+
 #endif // VULKAN_TYPES_H_
