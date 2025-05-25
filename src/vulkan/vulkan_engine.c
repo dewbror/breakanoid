@@ -203,7 +203,7 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     }
     LOG_INFO("Vulkan rendering surface created");
 
-    surface_del_struct_t* p_surface_del_struct = (surface_del_struct_t)malloc(sizeof(surface_del_struct_t));
+    surface_del_struct_t* p_surface_del_struct = (surface_del_struct_t*)malloc(sizeof(surface_del_struct_t));
     p_surface_del_struct->instance = p_engine->instance;
     p_surface_del_struct->surface = p_engine->surface;
 
