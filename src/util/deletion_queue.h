@@ -34,7 +34,6 @@ deletion_queue_t* deletion_queue_alloc(void);
  * \param[in] p_queue Pointer to the deletion queue the new node is added to.
  * \param[in] p_resource Pointer to the resource to be deleted by the deletion function.
  * \param[in] deletion_func Pointer to the function that will delete the resource.
- *
  * \returns True if successful, false if failed.
  */
 bool deletion_queue_queue(deletion_queue_t* p_queue, void* p_resource, void (*deletion_func)(void*));
@@ -44,8 +43,8 @@ bool deletion_queue_queue(deletion_queue_t* p_queue, void* p_resource, void (*de
  * freed and set to NULL
  *
  * \param[in] pp_queue Double pointer to the deletion_queue to flush.
- *
  * \return True if successful, false if failed.
  */
 bool deletion_queue_flush(deletion_queue_t** pp_queue);
+
 #endif // DELETION_QUEUE_H_

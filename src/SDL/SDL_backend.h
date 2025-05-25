@@ -11,4 +11,5 @@
  * \return True if successful, false if failed.
  */
 bool init_SDL_backend(struct vulkan_engine_s* p_engine);
+
 #endif // SDL_BACKEND_H_
