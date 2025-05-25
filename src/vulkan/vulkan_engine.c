@@ -195,8 +195,15 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     }
 
     // Initialize SDL
-    if(!init_SDL_backend(p_engine)) {
+    if(!SDL_backend_init(
+           &p_engine->p_SDL_window, (int)p_engine->window_extent.width, (int)p_engine->window_extent.height)) {
         LOG_ERROR("Failed to initialize SDL backend");
+        return false;
+    }
+
+    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine->p_SDL_window, SDL_backend_destroy)) {
+        LOG_ERROR("Failed to queue deletion node");
+        SDL_backend_destroy(p_engine->p_SDL_window);
         return false;
     }
 
@@ -221,7 +228,6 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
 
     vulkan_instance_debug_msg_del_struct_t* p_debug_msg_del_struct =
         (vulkan_instance_debug_msg_del_struct_t*)malloc(sizeof(vulkan_instance_debug_msg_del_struct_t));
-
     p_debug_msg_del_struct->instance = p_engine->instance;
     p_debug_msg_del_struct->debug_msg = p_engine->debug_msg;
 
@@ -258,6 +264,8 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
         vulkan_device_destroy(p_engine->device);
         return false;
     }
+
+    // TODO: Create vulkan_swapchain.c/.h
 
     // Create swapchain
     if(!create_swapchain(p_engine)) {
