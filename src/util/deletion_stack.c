@@ -3,30 +3,30 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util/deletion_queue.h"
+#include "util/deletion_stack.h"
 #include "logger.h"
 
-deletion_queue_t* deletion_queue_alloc(void) {
+deletion_stack_t* deletion_stack_init(void) {
     // Allocate new deletion queue
-    deletion_queue_t* p_queue = (deletion_queue_t*)malloc(sizeof(deletion_queue_t));
+    deletion_stack_t* p_queue = (deletion_stack_t*)malloc(sizeof(deletion_stack_t));
     if(p_queue == NULL) {
-        LOG_ERROR("Failed to allocate deletion queue: %s", strerror(errno));
+        LOG_ERROR("Failed to initiate deletion stack: %s", strerror(errno));
         return NULL;
     }
 
     p_queue->p_first = NULL;
     p_queue->p_last  = NULL;
 
-    LOG_DEBUG("Deletion queue allocated successfully");
+    LOG_DEBUG("Deletion stack initiated successfully");
     return p_queue;
 }
 
-bool deletion_queue_queue(deletion_queue_t* p_queue, void* p_resource, void (*delete_func)(void*)) {
+bool deletion_stack_push(deletion_stack_t* p_queue, void* p_resource, void (*delete_func)(void*)) {
     // Allocate memory for new deletion_node
     deletion_node_t* p_new_node = (deletion_node_t*)malloc(sizeof(deletion_node_t));
     if(p_new_node == NULL) {
         // Handle malloc error
-        LOG_ERROR("Failed to allocate deletion node: %s", strerror(errno));
+        LOG_ERROR("Failed to push on deletion stack: %s", strerror(errno));
         return false;
     }
 
@@ -44,28 +44,28 @@ bool deletion_queue_queue(deletion_queue_t* p_queue, void* p_resource, void (*de
     }
     p_queue->p_last = p_new_node;
 
-    LOG_DEBUG("Deletion node allocated successfully");
+    LOG_DEBUG("Push on deletion stack successfully");
     return true;
 }
 
-bool deletion_queue_flush(deletion_queue_t** pp_queue) {
+bool deletion_stack_flush(deletion_stack_t** pp_queue) {
     // Check if pp_queue is NULL
     if(pp_queue == NULL) {
-        LOG_ERROR("deletion_queue_flush: pp_queue is NULL");
+        LOG_ERROR("deletion_stack_flush: pp_queue is NULL");
         return false;
     }
 
     // Dereference pointer
-    deletion_queue_t* p_queue = *pp_queue;
+    deletion_stack_t* p_queue = *pp_queue;
 
     // Check if *pp_queue is NULL
     if(p_queue == NULL) {
-        LOG_ERROR("deletion_queue_flush: *pp_queue is NULL");
+        LOG_ERROR("deletion_stack_flush: *pp_queue is NULL");
         return false;
     }
 
     // Flush deletion queue
-    LOG_DEBUG("Flushing deletion queue");
+    LOG_DEBUG("Flushing deletion stack");
     while(p_queue->p_last != NULL) {
         deletion_node_t* p_node = p_queue->p_last;
         p_queue->p_last         = p_node->p_prev;
@@ -83,6 +83,6 @@ bool deletion_queue_flush(deletion_queue_t** pp_queue) {
     // Free the deletion queue itself and set it to NULL
     free(p_queue);
     *pp_queue = NULL;
-    LOG_DEBUG("Deletion queue flushed");
+    LOG_DEBUG("Deletion stack flushed");
     return true;
 }

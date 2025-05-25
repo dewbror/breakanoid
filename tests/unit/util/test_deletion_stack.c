@@ -10,7 +10,7 @@
 #include <setjmp.h>
 #include <cmocka.h>
 
-#include "util/deletion_queue.h"
+#include "util/deletion_stack.h"
 
 static int setup(void** state) {
     // UNUSED
@@ -26,7 +26,7 @@ static int teardown(void** state) {
     return 0;
 }
 
-static void test_deletion_queue(void** state) {
+static void test_deletion_stack(void** state) {
     // UNUSED
     (void)state;
 
@@ -46,8 +46,8 @@ static void test_deletion_queue(void** state) {
     // assert_true(strstr(buf, "[TRACE] ") != NULL);
 }
 
-// const struct CMUnitTest deletion_queue_tests[] = {
+// const struct CMUnitTest deletion_stack_tests[] = {
 //     // cmocka_unit_test_setup_teardown(test_log_file_creation, setup, teardown),
 // };
 //
-// const size_t deletion_queue_tests_count = sizeof(deletion_queue_tests) / sizeof(deletion_queue_tests[0]);
+// const size_t deletion_stack_tests_count = sizeof(deletion_stack_tests) / sizeof(deletion_stack_tests[0]);

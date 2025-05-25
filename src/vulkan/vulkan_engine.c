@@ -10,7 +10,7 @@
 #include "vulkan/vulkan_instance.h"
 #include "vulkan/vulkan_device.h"
 #include "vulkan/vulkan_engine.h"
-#include "util/deletion_queue.h"
+#include "util/deletion_stack.h"
 #include "SDL/SDL_backend.h"
 
 #define HEIGHT 1080
@@ -187,9 +187,9 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     p_engine->window_extent.width = WIDTH;
 
     // Allocate main deletion queue
-    p_engine->p_main_delq = deletion_queue_alloc();
+    p_engine->p_main_del_stack = deletion_stack_init();
     // This NULL check is technically unnecessary since it is also performed inside deletion_queue_alloc
-    if(p_engine->p_main_delq == NULL) {
+    if(p_engine->p_main_del_stack == NULL) {
         LOG_ERROR("Vulkan engine deletion queue is NULL after allocation");
         return false;
     }
@@ -201,7 +201,7 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
         return false;
     }
 
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine->p_SDL_window, SDL_backend_destroy)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine->p_SDL_window, SDL_backend_destroy)) {
         LOG_ERROR("Failed to queue deletion node");
         SDL_backend_destroy(p_engine->p_SDL_window);
         return false;
@@ -214,7 +214,7 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     }
 
     // Possibly move deletion to inside the init functions
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine->instance, vulkan_instance_destroy)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine->instance, vulkan_instance_destroy)) {
         LOG_ERROR("Failed to queue deletion node");
         vulkan_instance_destroy(p_engine->instance);
         return false;
@@ -231,7 +231,7 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     p_debug_msg_del_struct->instance = p_engine->instance;
     p_debug_msg_del_struct->debug_msg = p_engine->debug_msg;
 
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_debug_msg_del_struct, vulkan_instance_debug_msg_destroy)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_debug_msg_del_struct, vulkan_instance_debug_msg_destroy)) {
         LOG_ERROR("Failed to queue deletion callback");
         vulkan_instance_debug_msg_destroy(p_debug_msg_del_struct);
         return false;
@@ -243,7 +243,7 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
         return false;
     }
     LOG_INFO("Vulkan rendering surface created");
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroySurfaceKHR_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroySurfaceKHR_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         return false;
     }
@@ -259,7 +259,7 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
         return false;
     }
 
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine->device, vulkan_device_destroy)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine->device, vulkan_device_destroy)) {
         LOG_ERROR("Failed to queue deletion node");
         vulkan_device_destroy(p_engine->device);
         return false;
@@ -323,13 +323,13 @@ bool vulkan_engine_destroy(vulkan_engine_t* p_engine) {
     vkDeviceWaitIdle(p_engine->device);
 
     // Flush deletion queue
-    if(!deletion_queue_flush(&p_engine->p_main_delq)) {
+    if(!deletion_stack_flush(&p_engine->p_main_del_stack)) {
         LOG_ERROR("Failed to flush deletion queue");
         return false;
     }
 
     // Check that p_main_delq is NULL after flushing
-    if(p_engine->p_main_delq != NULL) {
+    if(p_engine->p_main_del_stack != NULL) {
         LOG_ERROR("Failed to flush deletion queue");
         return false;
     }
@@ -462,7 +462,7 @@ static bool create_swapchain(vulkan_engine_t* p_engine) {
         return false;
     }
     LOG_INFO("Swapchain created");
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroySwapchainKHR_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroySwapchainKHR_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         vkDestroySwapchainKHR_wrapper(p_engine);
         return false;
@@ -481,7 +481,7 @@ static bool create_swapchain(vulkan_engine_t* p_engine) {
     // Allocate array to hole swapchain images
     p_engine->swapchain_images.p_images = (VkImage*)malloc(image_count * sizeof(VkImage));
     p_engine->swapchain_images.images_count = image_count;
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine->swapchain_images.p_images, free_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine->swapchain_images.p_images, free_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         free_wrapper(p_engine->swapchain_images.p_images);
         return false;
@@ -610,7 +610,7 @@ static bool create_image_views(vulkan_engine_t* p_engine) {
             "Failed to allocate memory of size %lu: %s", p_engine->swapchain_images.images_count * sizeof(VkImageView),
             strerror(errno));
     }
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine->swapchain_images.p_image_views, free_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine->swapchain_images.p_image_views, free_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         free_wrapper(p_engine->swapchain_images.p_image_views);
         return false;
@@ -654,7 +654,7 @@ static bool create_image_views(vulkan_engine_t* p_engine) {
         }
     }
 
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyImageView_array_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyImageView_array_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         vkDestroyImageView_array_wrapper(p_engine);
         return false;
@@ -747,13 +747,13 @@ static bool create_image_views(vulkan_engine_t* p_engine) {
 
     // ADD DESTRUCTION OF DRAW IMAGE AND DRAW IMAGE VIEW TO DELETION QUEUE
 
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyImage_FreeMemory_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyImage_FreeMemory_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         vkDestroyImage_FreeMemory_wrapper(p_engine);
         return false;
     }
 
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyImageView_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyImageView_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         vkDestroyImageView_wrapper(p_engine);
         return false;
@@ -884,13 +884,13 @@ static bool create_commands(vulkan_engine_t* p_engine) {
         return false;
     }
 
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyCommandPool_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyCommandPool_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         vkDestroyCommandPool_wrapper(p_engine);
         return false;
     }
 
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyCommandPool_array_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyCommandPool_array_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         vkDestroyCommandPool_array_wrapper(p_engine);
         return false;
@@ -959,13 +959,13 @@ static bool create_sync_structs(vulkan_engine_t* p_engine) {
         return false;
     }
 
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyFence_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyFence_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         vkDestroyFence_wrapper(p_engine);
         return false;
     }
 
-    if(!deletion_queue_queue(p_engine->p_main_delq, p_engine, vkDestroyFence_Sem_wrapper)) {
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyFence_Sem_wrapper)) {
         LOG_ERROR("Failed to queue deletion node");
         vkDestroyFence_Sem_wrapper(p_engine);
         return false;

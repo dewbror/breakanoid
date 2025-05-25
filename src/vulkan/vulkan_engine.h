@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <vulkan/vulkan_core.h>
 
-#include "util/deletion_queue.h"
 #include "vulkan/vulkan_types.h"
 
 #define FRAMES_IN_FLIGHT 2
@@ -40,7 +39,7 @@ typedef struct frame_data_s {
  * A struct containing all the necessary vulkan fields.
  */
 typedef struct vulkan_engine_s {
-    struct deletion_queue_s* p_main_delq;
+    struct deletion_stack_s* p_main_del_stack;
     struct SDL_Window* p_SDL_window;
     VkExtent2D window_extent;
     VkInstance instance;

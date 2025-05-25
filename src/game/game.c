@@ -3,19 +3,19 @@
 #include "logger.h"
 #include "vulkan/vulkan_engine.h"
 #include "game/game.h"
-#include "util/deletion_queue.h"
+#include "util/deletion_stack.h"
 
 /**
  *
  */
-bool game_run(struct vulkan_engine_s* p_engine, game_t* p_game) {
+bool game_init(struct vulkan_engine_s* p_engine, game_t* p_game) {
     // UNUSED
     (void)p_engine;
     (void)p_game;
 
     // Allocate game deletion queue
-    p_game->p_delq = deletion_queue_alloc();
-    if(p_game->p_delq == NULL) {
+    p_game->p_del_stack = deletion_stack_init();
+    if(p_game->p_del_stack == NULL) {
         // Handle deletion_queue_alloc error
         LOG_ERROR("Failed to allocate deletion queue");
         return false;
@@ -33,13 +33,13 @@ bool game_destroy(game_t* p_game) {
         return false;
     }
     // Flush deletion queue
-    if(!deletion_queue_flush(&p_game->p_delq)) {
+    if(!deletion_stack_flush(&p_game->p_del_stack)) {
         LOG_ERROR("Failed flush deletion queue");
         return false;
     }
 
     // Check that p_delq is NULL
-    if(p_game->p_delq != NULL) {
+    if(p_game->p_del_stack != NULL) {
         LOG_ERROR("Failed to flush deletion queue");
         return false;
     }

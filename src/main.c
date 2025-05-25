@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     if(success) {
         // Start game
         game_t game;
-        success = game_run(&engine, &game);
+        success = game_init(&engine, &game);
         game_destroy(&game);
     } else {
         LOG_ERROR("Failed to initiate vulkan engine");

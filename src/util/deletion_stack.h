@@ -1,5 +1,5 @@
-#ifndef DELETION_QUEUE_H_
-#define DELETION_QUEUE_H_
+#ifndef DELETION_STACK_H_
+#define DELETION_STACK_H_
 
 #include <stdbool.h>
 
@@ -16,17 +16,17 @@ typedef struct deletion_node_s {
 /**
  * A deletion queue, holds pointers to the first and last nodes in the queue.
  */
-typedef struct deletion_queue_s {
+typedef struct deletion_stack_s {
     deletion_node_t* p_first;
     deletion_node_t* p_last;
-} deletion_queue_t;
+} deletion_stack_t;
 
 /**
  * Allocate a new deletion_queue on the heap, the deletion queue is deleted when using deletion_queue_flush.
  *
  * \return Pointer to newly allocated deletion_queue.
  */
-deletion_queue_t* deletion_queue_alloc(void);
+deletion_stack_t* deletion_stack_init(void);
 
 /**
  * Allocate a new deletion node on the heap and add it to the end of the deletion queue.
@@ -36,7 +36,7 @@ deletion_queue_t* deletion_queue_alloc(void);
  * \param[in] deletion_func Pointer to the function that will delete the resource.
  * \returns True if successful, false if failed.
  */
-bool deletion_queue_queue(deletion_queue_t* p_queue, void* p_resource, void (*deletion_func)(void*));
+bool deletion_stack_push(deletion_stack_t* p_queue, void* p_resource, void (*deletion_func)(void*));
 
 /**
  * Flush the deletion queue. Callbacks the deletion functions in the deletion queue from last to first. *pp_queue is
@@ -45,6 +45,6 @@ bool deletion_queue_queue(deletion_queue_t* p_queue, void* p_resource, void (*de
  * \param[in] pp_queue Double pointer to the deletion_queue to flush.
  * \return True if successful, false if failed.
  */
-bool deletion_queue_flush(deletion_queue_t** pp_queue);
+bool deletion_stack_flush(deletion_stack_t** pp_queue);
 
-#endif // DELETION_QUEUE_H_
+#endif // DELETION_STACK_H_
