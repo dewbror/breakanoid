@@ -3,6 +3,8 @@
 
 #include <vulkan/vulkan_core.h>
 
+#define FRAMES_IN_FLIGHT 2
+
 /**
  * Struct for holding the queue family information.
  */
@@ -57,5 +59,14 @@ typedef struct allocated_image_s {
     VkExtent3D extent;
     VkFormat format;
 } allocated_image_t;
+
+typedef struct frame_data_s {
+    VkCommandPool cmd_pool;
+    VkCommandBuffer main_cmd_buffer;
+    VkSemaphore swapchain_semaphore;
+    VkSemaphore render_semaphore;
+    VkFence render_fence;
+    struct deletion_queue_s* p_delq;
+} frame_data_t;
 
 #endif // VULKAN_TYPES_H_

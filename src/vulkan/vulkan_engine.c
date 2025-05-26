@@ -11,6 +11,7 @@
 #include "vulkan/vulkan_device.h"
 #include "vulkan/vulkan_swapchain.h"
 #include "vulkan/vulkan_image.h"
+#include "vulkan/vulkan_cmd.h"
 #include "vulkan/vulkan_engine.h"
 #include "util/deletion_stack.h"
 #include "SDL/SDL_backend.h"
@@ -43,27 +44,6 @@ typedef struct surface_del_struct_s {
  * \param[in] p_void_surface_del_struct Pointer to a sufrace_del_struct_t containing the surface to be destroyed.
  */
 static void surface_destroy(void* p_void_surface_del_struct);
-
-/**
- * Create the command pools/allocate command buffers for commands submitted to graphics queue and for immediate submits.
- *
- * \param[in] p_engine Pointer to the vulkan engine
- */
-static bool create_commands(vulkan_engine_t* p_engine);
-
-/**
- * vkDestroyCommandPool wrapper
- *
- * \param[in] p_engine Pointer to the vulkan engine
- */
-static void vkDestroyCommandPool_wrapper(void* p_engine);
-
-/**
- * vkDestroyCommandPool wrapper for command pools in frame array
- *
- * \param[in] p_engine Pointer to the vulkan engine
- */
-static void vkDestroyCommandPool_array_wrapper(void* p_engine);
 
 /**
  * Create sync structures
@@ -206,12 +186,6 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
         return false;
     }
 
-    // Create image views
-    // if(!create_image_views(p_engine)) {
-    //     LOG_ERROR("Failed to create swapchain image views\n");
-    //     return false;
-    // }
-
     if(!vulkan_image_create(
            p_engine->device, p_engine->physical_device, p_engine->window_extent.width, p_engine->window_extent.height,
            &p_engine->draw_image)) {
@@ -229,10 +203,34 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     }
 
     // Create commands
-    if(!create_commands(p_engine)) {
-        LOG_ERROR("Failed to create commands");
+    if(!vulkan_cmd_frame_init(p_engine->device, &p_engine->queues, p_engine->frames)) {
+        LOG_ERROR("Failed to create frame commands");
         return false;
     }
+
+    if(!vulkan_cmd_imm_init(p_engine->device, &p_engine->queues, &p_engine->imm_cmd_pool, &p_engine->imm_cmd_buffer)) {
+        LOG_ERROR("Failed to create frame commands");
+        return false;
+    }
+    
+    for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
+        cmd_pool_del_struct_t* p_cmd_pool = (cmd_pool_del_struct_t*)malloc(sizeof(cmd_pool_del_struct_t));
+        p_cmd_pool->device = p_engine->device;
+        p_cmd_pool->cmd_pool = p_engine->frames[i].cmd_pool;
+        if(!deletion_stack_push(p_engine->p_main_del_stack, p_cmd_pool, vulkan_cmd_pool_destroy)) {
+            LOG_ERROR("Failed to push onto deletion stack");
+            vulkan_cmd_pool_destroy(p_cmd_pool);
+            return false;
+        }
+    }
+    cmd_pool_del_struct_t* p_cmd_pool = (cmd_pool_del_struct_t*)malloc(sizeof(cmd_pool_del_struct_t));
+    p_cmd_pool->device = p_engine->device;
+    p_cmd_pool->cmd_pool = p_engine->imm_cmd_pool;
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_cmd_pool, vulkan_cmd_pool_destroy)) {
+            LOG_ERROR("Failed to push onto deletion stack");
+            vulkan_cmd_pool_destroy(p_cmd_pool);
+            return false;
+        }
 
     // Create sync structures
     if(!create_sync_structs(p_engine)) {
@@ -317,90 +315,7 @@ static void surface_destroy(void* p_void_surface_del_struct) {
     p_void_surface_del_struct = NULL;
 }
 
-static bool create_commands(vulkan_engine_t* p_engine) {
-    if(p_engine == NULL) {
-        LOG_ERROR("create_commands: p_engine is NULL");
-        return false;
-    }
 
-    // Create a command pool for commands submitted to the graphics queue
-    // We also want the pool to allow for resetting of individual command buffers
-
-    VkCommandPoolCreateInfo cmd_pool_info = {0};
-
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    cmd_pool_info.queueFamilyIndex = p_engine->queues.graphics_index;
-
-    // Allocate the default command buffer that we will use for rendering
-    VkCommandBufferAllocateInfo render_cmd_alloc_info = {0};
-
-    render_cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    render_cmd_alloc_info.commandBufferCount = 1;
-    render_cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
-        if(vkCreateCommandPool(p_engine->device, &cmd_pool_info, VK_NULL_HANDLE, &p_engine->frames[i].cmd_pool) !=
-           VK_SUCCESS) {
-            LOG_ERROR("Failed to create frame command pool");
-            return false;
-        }
-        render_cmd_alloc_info.commandPool = p_engine->frames[i].cmd_pool;
-        if(vkAllocateCommandBuffers(p_engine->device, &render_cmd_alloc_info, &p_engine->frames[i].main_cmd_buffer) !=
-           VK_SUCCESS) {
-            LOG_ERROR("Failed to create frame command pool");
-            return false;
-        }
-    }
-
-    // Create immediate submit command pool and command buffer
-
-    if(vkCreateCommandPool(p_engine->device, &cmd_pool_info, VK_NULL_HANDLE, &p_engine->imm_cmd_pool) != VK_SUCCESS) {
-        LOG_ERROR("Failed to create immediate command pool");
-        return false;
-    }
-
-    VkCommandBufferAllocateInfo imm_cmd_alloc_info = {0};
-
-    imm_cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    imm_cmd_alloc_info.commandBufferCount = 1;
-    imm_cmd_alloc_info.commandPool = p_engine->imm_cmd_pool;
-    imm_cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-    if(vkAllocateCommandBuffers(p_engine->device, &imm_cmd_alloc_info, &p_engine->imm_cmd_buffer) != VK_SUCCESS) {
-        LOG_ERROR("Failed to allocate immediate command buffer");
-        return false;
-    }
-
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyCommandPool_wrapper)) {
-        LOG_ERROR("Failed to queue deletion node");
-        vkDestroyCommandPool_wrapper(p_engine);
-        return false;
-    }
-
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyCommandPool_array_wrapper)) {
-        LOG_ERROR("Failed to queue deletion node");
-        vkDestroyCommandPool_array_wrapper(p_engine);
-        return false;
-    }
-
-    LOG_INFO("Command structures created");
-    return true;
-}
-
-static void vkDestroyCommandPool_wrapper(void* p_engine) {
-    LOG_DEBUG("Callback: vkDestroyCommandPool_wrapper");
-    vkDestroyCommandPool(
-        ((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->imm_cmd_pool, VK_NULL_HANDLE);
-}
-
-static void vkDestroyCommandPool_array_wrapper(void* p_engine) {
-    LOG_DEBUG("Callback: vkDestroyCommandPool_array_wrapper");
-    for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
-        LOG_DEBUG("    Destroying frame command pool, index: %d", i);
-        vkDestroyCommandPool(
-            ((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->frames[i].cmd_pool, VK_NULL_HANDLE);
-    }
-}
 
 static bool create_sync_structs(vulkan_engine_t* p_engine) {
     if(p_engine == NULL) {

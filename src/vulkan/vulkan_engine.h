@@ -6,19 +6,6 @@
 
 #include "vulkan/vulkan_types.h"
 
-#define FRAMES_IN_FLIGHT 2
-
-
-
-typedef struct frame_data_s {
-    VkCommandPool cmd_pool;
-    VkCommandBuffer main_cmd_buffer;
-    VkSemaphore swapchain_semaphore;
-    VkSemaphore render_semaphore;
-    VkFence render_fence;
-    struct deletion_queue_s* p_delq;
-} frame_data_t;
-
 /**
  * A struct containing all the necessary vulkan fields.
  */
@@ -36,7 +23,7 @@ typedef struct vulkan_engine_s {
     vulkan_swapchain_t vulkan_swapchain;
     allocated_image_t draw_image;
     long frame_count;
-    frame_data_t frames[FRAMES_IN_FLIGHT];
+    frame_data_t frames[FRAMES_IN_FLIGHT]; // TODO: Rename to p_frames
     VkCommandPool imm_cmd_pool;
     VkCommandBuffer imm_cmd_buffer;
     VkFence imm_fence;
