@@ -12,6 +12,7 @@
 #include "vulkan/vulkan_swapchain.h"
 #include "vulkan/vulkan_image.h"
 #include "vulkan/vulkan_cmd.h"
+#include "vulkan/vulkan_synch.h"
 #include "vulkan/vulkan_engine.h"
 #include "util/deletion_stack.h"
 #include "SDL/SDL_backend.h"
@@ -44,27 +45,6 @@ typedef struct surface_del_struct_s {
  * \param[in] p_void_surface_del_struct Pointer to a sufrace_del_struct_t containing the surface to be destroyed.
  */
 static void surface_destroy(void* p_void_surface_del_struct);
-
-/**
- * Create sync structures
- *
- * \param[in] p_engine Pointer to vulkan engine.
- */
-static bool create_sync_structs(vulkan_engine_t* p_engine);
-
-/**
- * vkDestroyFence wrapper.
- *
- * \param[in] p_engine Pointer to the vulkan engine
- */
-static void vkDestroyFence_wrapper(void* p_engine);
-
-/**
- * vkDestroyFence and vkDestroySemaphore wrapper for frame array sync structs.
- *
- * \param[in] p_engine Pointer to the vulkan engine
- */
-static void vkDestroyFence_Sem_wrapper(void* p_engine);
 
 /**
  * Create descriptors.
@@ -193,7 +173,8 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
         return false;
     }
 
-    allocated_image_del_strut_t* p_allocated_image_del_struct = (allocated_image_del_strut_t*)malloc(sizeof(allocated_image_del_strut_t));
+    allocated_image_del_strut_t* p_allocated_image_del_struct =
+        (allocated_image_del_strut_t*)malloc(sizeof(allocated_image_del_strut_t));
     p_allocated_image_del_struct->device = p_engine->device;
     p_allocated_image_del_struct->allocated_image = p_engine->draw_image;
     if(!deletion_stack_push(p_engine->p_main_del_stack, p_allocated_image_del_struct, vulkan_image_destroy)) {
@@ -212,7 +193,7 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
         LOG_ERROR("Failed to create frame commands");
         return false;
     }
-    
+
     for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
         cmd_pool_del_struct_t* p_cmd_pool = (cmd_pool_del_struct_t*)malloc(sizeof(cmd_pool_del_struct_t));
         p_cmd_pool->device = p_engine->device;
@@ -227,16 +208,39 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     p_cmd_pool->device = p_engine->device;
     p_cmd_pool->cmd_pool = p_engine->imm_cmd_pool;
     if(!deletion_stack_push(p_engine->p_main_del_stack, p_cmd_pool, vulkan_cmd_pool_destroy)) {
-            LOG_ERROR("Failed to push onto deletion stack");
-            vulkan_cmd_pool_destroy(p_cmd_pool);
-            return false;
-        }
-
-    // Create sync structures
-    if(!create_sync_structs(p_engine)) {
-        LOG_ERROR("Failed to create sync structures");
+        LOG_ERROR("Failed to push onto deletion stack");
+        vulkan_cmd_pool_destroy(p_cmd_pool);
         return false;
     }
+
+    // Create sync structures
+    if(!vulkan_sync_frame_init(p_engine->device, p_engine->frames)) {
+        LOG_ERROR("Failed to create frame sync structures");
+        return false;
+    }
+    vulkan_sync_frame_del_struct_t* p_frame = malloc(sizeof(vulkan_sync_frame_del_struct_t));
+    p_frame->device = p_engine->device;
+    p_frame->p_frames = p_engine->frames;
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_frame, vulkan_sync_frame_destroy)) {
+        LOG_ERROR("Failed to push on deletion stack");
+        vulkan_sync_frame_destroy(p_frame);
+        return false;
+    }
+
+    // Create sync structures
+    if(!vulkan_sync_imm_init(p_engine->device, &p_engine->imm_fence)) {
+        LOG_ERROR("Failed to create immidiate sync structures");
+        return false;
+    }
+    fence_del_struct_t* p_fence = (fence_del_struct_t*)malloc(sizeof(fence_del_struct_t));
+    p_fence->device = p_engine->device;
+    p_fence->fence = p_engine->imm_fence;
+    if(!deletion_stack_push(p_engine->p_main_del_stack, p_fence, vulkan_sync_fence_destroy)) {
+        LOG_ERROR("Failed to push on deletion stack");
+        vulkan_sync_fence_destroy(p_fence);
+        return false;
+    }
+
 
     // Create discriptors
     if(!create_descriptors(p_engine)) {
@@ -313,89 +317,6 @@ static void surface_destroy(void* p_void_surface_del_struct) {
     free(p_surface_del_struct);
     p_surface_del_struct = NULL;
     p_void_surface_del_struct = NULL;
-}
-
-
-
-static bool create_sync_structs(vulkan_engine_t* p_engine) {
-    if(p_engine == NULL) {
-        LOG_ERROR("create_sync_structs: p_engine is NULL");
-        return false;
-    }
-
-    // Create sync structures
-
-    // One fence to control when the GPU has finished rendering the frame and 2 semaphores to sync rendering with the
-    // swapchain. We want the fence to start signaled so we can wait on it the first time.
-
-    VkFenceCreateInfo fence_info = {0};
-
-    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    VkSemaphoreCreateInfo sem_info = {0};
-
-    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    sem_info.flags = 0;
-
-    for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
-        if(vkCreateFence(p_engine->device, &fence_info, VK_NULL_HANDLE, &p_engine->frames[i].render_fence) !=
-           VK_SUCCESS) {
-            LOG_ERROR("Failed to create render fence");
-            return false;
-        }
-        if(vkCreateSemaphore(p_engine->device, &sem_info, VK_NULL_HANDLE, &p_engine->frames[i].render_semaphore) !=
-           VK_SUCCESS) {
-            LOG_ERROR("Failed to create render semaphore");
-            return false;
-        }
-        if(vkCreateSemaphore(p_engine->device, &sem_info, VK_NULL_HANDLE, &p_engine->frames[i].swapchain_semaphore) !=
-           VK_SUCCESS) {
-            LOG_ERROR("Failed to create swapchain semahpore");
-            return false;
-        }
-    }
-
-    if(vkCreateFence(p_engine->device, &fence_info, VK_NULL_HANDLE, &p_engine->imm_fence) != VK_SUCCESS) {
-        LOG_ERROR("Failed to create immediate fence");
-        return false;
-    }
-
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyFence_wrapper)) {
-        LOG_ERROR("Failed to queue deletion node");
-        vkDestroyFence_wrapper(p_engine);
-        return false;
-    }
-
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine, vkDestroyFence_Sem_wrapper)) {
-        LOG_ERROR("Failed to queue deletion node");
-        vkDestroyFence_Sem_wrapper(p_engine);
-        return false;
-    }
-
-    LOG_INFO("Sync structures created");
-    return true;
-}
-
-static void vkDestroyFence_wrapper(void* p_engine) {
-    LOG_DEBUG("Callback: vkDestroyFence_wrapper");
-    vkDestroyFence(((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->imm_fence, VK_NULL_HANDLE);
-}
-
-static void vkDestroyFence_Sem_wrapper(void* p_engine) {
-    LOG_DEBUG("Callback: vkDestroyFence_Sem_wrapper");
-
-    for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
-        LOG_DEBUG("    Destroying frame sync structs, index: %d", i);
-        vkDestroyFence(
-            ((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->frames[i].render_fence, VK_NULL_HANDLE);
-        vkDestroySemaphore(
-            ((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->frames[i].render_semaphore,
-            VK_NULL_HANDLE);
-        vkDestroySemaphore(
-            ((vulkan_engine_t*)p_engine)->device, ((vulkan_engine_t*)p_engine)->frames[i].swapchain_semaphore,
-            VK_NULL_HANDLE);
-    }
 }
 
 static bool create_descriptors(vulkan_engine_t* p_engine) {
