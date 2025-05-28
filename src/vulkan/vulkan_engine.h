@@ -5,6 +5,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "error/error.h"
+#include "vulkan/vulkan_descriptor.h"
 #include "vulkan/vulkan_types.h"
 
 /**
@@ -28,6 +29,9 @@ typedef struct vulkan_engine_s {
     VkCommandPool imm_cmd_pool;
     VkCommandBuffer imm_cmd_buffer;
     VkFence imm_fence;
+    descriptor_allocator_t desc_alloc;
+    VkDescriptorSet draw_img_desc;
+    VkDescriptorSetLayout draw_img_desc_layout;
 } vulkan_engine_t;
 
 /**

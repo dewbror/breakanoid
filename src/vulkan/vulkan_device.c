@@ -30,7 +30,7 @@ static const bool enable_validation_layers = true;
  * \param[in] device The physical device that is checked for suitablility.
  * \return True if the device is suitable, false if it is not.
  */
-static bool is_device_suitable(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice physical_device);
+static bool is_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice physical_device);
 
 /**
  * Check that the device has support for the device extensions listed in device_extensions (which is currently just
@@ -68,7 +68,7 @@ error_t vulkan_physical_device_init(VkInstance instance, VkSurfaceKHR surface, V
     // Check for suitable device in devices
     LOG_DEBUG("Looking for suitable devices:");
     for(uint32_t i = 0; i < device_count; ++i) {
-        if(is_device_suitable(instance, surface, devices[i])) {
+        if(is_device_suitable(surface, devices[i])) {
             *p_physical_device = devices[i];
             // msaa_samples    = get_maxUsable_sample_count(p_engine->physical_device);
             // p_engine->msaa_samples = VK_SAMPLE_COUNT_1_BIT;
@@ -90,7 +90,7 @@ error_t vulkan_physical_device_init(VkInstance instance, VkSurfaceKHR surface, V
     return SUCCESS;
 }
 
-static bool is_device_suitable(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice physical_device) {
+static bool is_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice physical_device) {
     // ALL DEVICE PROP. AND FEAT. QUERY SHOULD BE MOVED TO OWN func(S)
 
     // Query basic device properties
@@ -116,11 +116,10 @@ static bool is_device_suitable(VkInstance instance, VkSurfaceKHR surface, VkPhys
     vkGetPhysicalDeviceProperties2(physical_device, &properties2);
 
     LOG_DEBUG("Device name: %s", properties2.properties.deviceName);
-    LOG_DEBUG(
-        "Device supported Vulkan version: %uv%u.%u.%u", VK_API_VERSION_VARIANT(properties2.properties.apiVersion),
+    LOG_DEBUG("Device supported Vulkan version: %uv%u.%u.%u", VK_API_VERSION_VARIANT(properties2.properties.apiVersion),
         VK_API_VERSION_MAJOR(properties2.properties.apiVersion),
-        VK_API_VERSION_MINOR(properties2.properties.apiVersion), VK_API_VERSION_PATCH(properties2.properties.apiVersion)
-    );
+        VK_API_VERSION_MINOR(properties2.properties.apiVersion),
+        VK_API_VERSION_PATCH(properties2.properties.apiVersion));
 
     // Check that the device must support >1.3
     if(properties2.properties.apiVersion < VK_MAKE_VERSION(1, 3, 0)) {
@@ -212,8 +211,7 @@ static bool is_device_suitable(VkInstance instance, VkSurfaceKHR surface, VkPhys
 }
 
 bool vulkan_device_get_queue_families(
-    VkSurfaceKHR surface, VkPhysicalDevice physical_device, queue_family_data_t* p_queues
-) {
+    VkSurfaceKHR surface, VkPhysicalDevice physical_device, queue_family_data_t* p_queues) {
     if(surface == NULL) {
         LOG_ERROR("%s: surface is NULL", __func__);
         return false;
@@ -296,13 +294,10 @@ static bool check_device_extension_support(VkPhysicalDevice physical_device) {
     VkExtensionProperties* available_extensions =
         (VkExtensionProperties*)malloc(available_extensions_count * sizeof(VkExtensionProperties));
     vkEnumerateDeviceExtensionProperties(
-        physical_device, VK_NULL_HANDLE, &available_extensions_count, available_extensions
-    );
+        physical_device, VK_NULL_HANDLE, &available_extensions_count, available_extensions);
     if(available_extensions == NULL) {
-        LOG_ERROR(
-            "%s: Failed to allocated memory of size %lu", __func__,
-            available_extensions_count * sizeof(VkExtensionProperties)
-        );
+        LOG_ERROR("%s: Failed to allocated memory of size %lu", __func__,
+            available_extensions_count * sizeof(VkExtensionProperties));
 
         return false;
     }
@@ -338,8 +333,7 @@ static bool check_device_extension_support(VkPhysicalDevice physical_device) {
 }
 
 bool vulkan_device_get_swapchain_support(
-    VkSurfaceKHR surface, VkPhysicalDevice physical_device, swapchain_support_details_t* p_details
-) {
+    VkSurfaceKHR surface, VkPhysicalDevice physical_device, swapchain_support_details_t* p_details) {
     if(surface == NULL) {
         LOG_ERROR("%s: surface is NULL", __func__);
         return false;
@@ -381,8 +375,7 @@ bool vulkan_device_get_swapchain_support(
     if(present_modes_count != 0) {
         p_details->present_modes = (VkPresentModeKHR*)malloc(present_modes_count * sizeof(VkPresentModeKHR));
         vkGetPhysicalDeviceSurfacePresentModesKHR(
-            physical_device, surface, &present_modes_count, p_details->present_modes
-        );
+            physical_device, surface, &present_modes_count, p_details->present_modes);
         p_details->present_modes_count = present_modes_count;
     } else {
         LOG_ERROR("Device swapchin surface present modes unsupported");
@@ -395,8 +388,7 @@ bool vulkan_device_get_swapchain_support(
 }
 
 error_t vulkan_device_init(
-    VkSurfaceKHR surface, VkPhysicalDevice physical_device, VkDevice* p_device, queue_family_data_t* p_queues
-) {
+    VkSurfaceKHR surface, VkPhysicalDevice physical_device, VkDevice* p_device, queue_family_data_t* p_queues) {
     if(surface == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: surface is NULL", __func__);
 
@@ -428,10 +420,8 @@ error_t vulkan_device_init(
     // Allocate array of ints to hold the queue family indices
     uint32_t* unique_q_fams = (uint32_t*)malloc(unique_q_fams_count * sizeof(uint32_t));
     if(unique_q_fams == NULL) {
-        return error_init(
-            ERR_SRC_CORE, ERR_MALLOC, "%s: Failed to allocate memory of size %lu", __func__,
-            unique_q_fams_count * sizeof(uint32_t)
-        );
+        return error_init(ERR_SRC_CORE, ERR_MALLOC, "%s: Failed to allocate memory of size %lu", __func__,
+            unique_q_fams_count * sizeof(uint32_t));
     }
 
     // Fill allocated arrat with the queue family indices
@@ -448,10 +438,8 @@ error_t vulkan_device_init(
     VkDeviceQueueCreateInfo* q_create_infos =
         (VkDeviceQueueCreateInfo*)malloc(unique_q_fams_count * sizeof(VkDeviceQueueCreateInfo));
     if(q_create_infos == NULL)
-        return error_init(
-            ERR_SRC_CORE, ERR_TEMP, "%s: Failed to allocate memory of size %lu", __func__,
-            unique_q_fams_count * sizeof(VkDeviceQueueCreateInfo)
-        );
+        return error_init(ERR_SRC_CORE, ERR_TEMP, "%s: Failed to allocate memory of size %lu", __func__,
+            unique_q_fams_count * sizeof(VkDeviceQueueCreateInfo));
 
     // Fill our device queue create info(s)
     float q_priority = 1.0f;

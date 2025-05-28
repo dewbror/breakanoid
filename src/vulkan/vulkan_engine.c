@@ -17,6 +17,7 @@
 #include "vulkan/vulkan_image.h"
 #include "vulkan/vulkan_cmd.h"
 #include "vulkan/vulkan_sync.h"
+#include "vulkan_descriptor.h"
 #include "vulkan/vulkan_engine.h"
 
 #include "util/deletion_stack.h"
@@ -52,13 +53,6 @@ typedef struct surface_del_struct_s {
  */
 static void surface_destroy(void* p_void_surface_del_struct);
 
-/**
- * Create descriptors.
- *
- * \param[in] p_engine Pointer to the vulkan engine.
- */
-static bool create_descriptors(vulkan_engine_t* p_engine);
-
 error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     // Check if p_engine is NULL
     if(p_engine == NULL)
@@ -76,9 +70,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     error_t err;
 
     // Initialize SDL
-    err = sdl_backend_init(
-        &p_engine->p_window, (int)p_engine->window_extent.width, (int)p_engine->window_extent.height
-    );
+    err =
+        sdl_backend_init(&p_engine->p_window, (int)p_engine->window_extent.width, (int)p_engine->window_extent.height);
     if(err.code != 0)
         return err;
 
@@ -120,9 +113,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
 
     // Create SDL window surface
     if(!SDL_Vulkan_CreateSurface(p_engine->p_window, p_engine->instance, VK_NULL_HANDLE, &p_engine->surface))
-        return error_init(
-            ERR_SRC_SDL, SDL_ERR_VULKAN_CREATE_SURFACE, "Failed to create vulkan rendering surface: %s", SDL_GetError()
-        );
+        return error_init(ERR_SRC_SDL, SDL_ERR_VULKAN_CREATE_SURFACE, "Failed to create vulkan rendering surface: %s",
+            SDL_GetError());
     LOG_INFO("Vulkan rendering surface created");
 
     surface_del_struct_t* p_surface_del_struct = (surface_del_struct_t*)malloc(sizeof(surface_del_struct_t));
@@ -148,10 +140,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
         return err;
     }
 
-    err = vulkan_swapchain_init(
-        p_engine->device, p_engine->physical_device, p_engine->surface, p_engine->p_window,
-        &p_engine->vulkan_swapchain
-    );
+    err = vulkan_swapchain_init(p_engine->device, p_engine->physical_device, p_engine->surface, p_engine->p_window,
+        &p_engine->vulkan_swapchain);
     if(err.code != 0)
         return err;
 
@@ -166,10 +156,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
         return err;
     }
 
-    err = vulkan_image_create(
-        p_engine->device, p_engine->physical_device, p_engine->window_extent.width, p_engine->window_extent.height,
-        &p_engine->draw_image
-    );
+    err = vulkan_image_create(p_engine->device, p_engine->physical_device, p_engine->window_extent.width,
+        p_engine->window_extent.height, &p_engine->draw_image);
     if(err.code != 0) {
         LOG_ERROR("Failed to create image");
         return err;
@@ -327,16 +315,4 @@ static void surface_destroy(void* p_void_surface_del_struct) {
     free(p_surface_del_struct);
     p_surface_del_struct = NULL;
     p_void_surface_del_struct = NULL;
-}
-
-static bool create_descriptors(vulkan_engine_t* p_engine) {
-    if(p_engine == NULL) {
-        LOG_ERROR("create_descriptors: p_engine is NULL");
-        return false;
-    }
-
-    // Create a descriptor pool  that will hold 10 sets with 1 image each
-
-    LOG_INFO("Descriptors created");
-    return true;
 }

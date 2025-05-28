@@ -65,27 +65,24 @@ static void get_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* 
  *
  * \return VK_FALSE.
  */
-static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type,
-    const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data, void* p_user_data
-);
+static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+    VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
+    void* p_user_data);
 
 /**
  * Proxy function for vkCreateDebugUtilsMessengerEXT.
  *
  * \return VkResult.
  */
-static VkResult CreateDebugUtilsMessengerEXT(
-    VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* p_create_info,
-    const VkAllocationCallbacks* p_allocator, VkDebugUtilsMessengerEXT* p_debug_messenger
-);
+static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
+    const VkDebugUtilsMessengerCreateInfoEXT* p_create_info, const VkAllocationCallbacks* p_allocator,
+    VkDebugUtilsMessengerEXT* p_debug_messenger);
 
 /**
  * Proxy function for vkDestroyDebugUtilsMessengerEXT.
  */
 static void DestroyDebugUtilsMessengerEXT(
-    VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger, const VkAllocationCallbacks* p_allocator
-);
+    VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger, const VkAllocationCallbacks* p_allocator);
 
 error_t vulkan_instance_init(VkInstance* p_instance) {
     if(p_instance == NULL)
@@ -101,10 +98,8 @@ error_t vulkan_instance_init(VkInstance* p_instance) {
     // Get the available vulkan driver version
     uint32_t api_version = 0;
     vkEnumerateInstanceVersion(&api_version);
-    LOG_DEBUG(
-        "Available Vulkan API version: %uv%u.%u.%u", VK_API_VERSION_VARIANT(api_version),
-        VK_API_VERSION_MAJOR(api_version), VK_API_VERSION_MINOR(api_version), VK_API_VERSION_PATCH(api_version)
-    );
+    LOG_DEBUG("Available Vulkan API version: %uv%u.%u.%u", VK_API_VERSION_VARIANT(api_version),
+        VK_API_VERSION_MAJOR(api_version), VK_API_VERSION_MINOR(api_version), VK_API_VERSION_PATCH(api_version));
 
     // Must be greater than 1.3
     if(api_version < VK_MAKE_VERSION(1, 3, 0))
@@ -150,7 +145,8 @@ error_t vulkan_instance_init(VkInstance* p_instance) {
 
     if(enable_validation_layers) {
         const VkLayerSettingEXT settings[] = {
-            {"VK_LAYER_KHRONOS_validation",           "validate_sync", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,&setting_validate_sync                      },
+            {"VK_LAYER_KHRONOS_validation",           "validate_sync", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
+             &setting_validate_sync          },
             {"VK_LAYER_KHRONOS_validation", "validate_best_practices", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
              &setting_validate_best_practices},
             {"VK_LAYER_KHRONOS_validation",    "enable_message_limit", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
@@ -229,8 +225,7 @@ static const char** get_required_layers(uint32_t* p_required_instance_layers_cou
         (VkLayerProperties*)malloc(available_layers_count * sizeof(VkLayerProperties));
     if(available_layers == NULL) {
         LOG_ERROR(
-            "%s: Failed to allocate memory of size %lu", __func__, available_layers_count * sizeof(VkLayerProperties)
-        );
+            "%s: Failed to allocate memory of size %lu", __func__, available_layers_count * sizeof(VkLayerProperties));
         return NULL;
     }
 
@@ -310,10 +305,8 @@ static const char** get_required_extensions(uint32_t* p_required_extensions_coun
     VkExtensionProperties* available_extensions =
         (VkExtensionProperties*)malloc(available_extensions_count * sizeof(VkExtensionProperties));
     if(available_extensions == NULL) {
-        LOG_ERROR(
-            "%s: Failed to allocate memory of size %lu", __func__,
-            available_extensions_count * sizeof(VkExtensionProperties)
-        );
+        LOG_ERROR("%s: Failed to allocate memory of size %lu", __func__,
+            available_extensions_count * sizeof(VkExtensionProperties));
 
         return NULL;
     }
@@ -412,9 +405,10 @@ static void get_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* 
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type,
-    const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data, void* p_user_data
-) {
+    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, // NOLINT(bugprone-easily-swappable-parameters)
+    VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
+    void* p_user_data) {
+
     // UNUSED
     (void)message_severity;
     (void)message_type;
@@ -533,10 +527,9 @@ void vulkan_instance_debug_msg_destroy(void* p_void_debug_msg_del_struct) {
     free(p_void_debug_msg_del_struct);
 }
 
-static VkResult CreateDebugUtilsMessengerEXT(
-    VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* p_create_info,
-    const VkAllocationCallbacks* p_allocator, VkDebugUtilsMessengerEXT* p_debug_messenger
-) {
+static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
+    const VkDebugUtilsMessengerCreateInfoEXT* p_create_info, const VkAllocationCallbacks* p_allocator,
+    VkDebugUtilsMessengerEXT* p_debug_messenger) {
     // Look up address of vkCreateDebugUtilsMessengerEXT
     PFN_vkCreateDebugUtilsMessengerEXT func =
         (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
@@ -549,8 +542,7 @@ static VkResult CreateDebugUtilsMessengerEXT(
 }
 
 static void DestroyDebugUtilsMessengerEXT(
-    VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger, const VkAllocationCallbacks* p_allocator
-) {
+    VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger, const VkAllocationCallbacks* p_allocator) {
 
     // Look up address of vkDestroyDebugUtilsMessengerEXT
     PFN_vkDestroyDebugUtilsMessengerEXT func =

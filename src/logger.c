@@ -14,9 +14,9 @@
 #define COLOR_CYAN "\x1b[36m"
 #define COLOR_RESET "\x1b[0m"
 
-static bool logging_to_file = true;
-static FILE* fp_log = NULL;
-static const char* log_file_name = NULL;
+static bool logging_to_file = true;      // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+static FILE* fp_log = NULL;              // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+static const char* log_file_name = NULL; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 static const char* const levels[] = {"[ERROR] ", "[WARN] ", "[INFO] ", "[DEBUG] ", "[TRACE] "};
 
 void logger_open(const char* file_name) {

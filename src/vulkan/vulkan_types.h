@@ -71,4 +71,14 @@ typedef struct frame_data_s {
     struct deletion_queue_s* p_delq;
 } frame_data_t;
 
+typedef struct pool_size_ratio_s {
+    VkDescriptorType type;
+    float ratio;
+} pool_size_ratio_t;
+
+typedef struct descriptor_allocator_s {
+    pool_size_ratio_t pool_size_ratio;
+    VkDescriptorPool pool;
+} descriptor_allocator_t;
+
 #endif // VULKAN_TYPES_H_

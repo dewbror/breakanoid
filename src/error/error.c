@@ -7,10 +7,9 @@
 
 error_t error_init(const error_src_t src, const int code, const char* fmt, ...) {
     va_list args;
-
-    // Initialize variable argument list
+    
+    // Get the size of the array we need to allocate
     va_start(args, fmt);
-
     int len = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
 
