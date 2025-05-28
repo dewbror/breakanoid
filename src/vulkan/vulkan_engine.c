@@ -247,11 +247,21 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
         return err;
     }
 
-    // Create discriptors
-    // if(!create_descriptors(p_engine)) {
-    //     LOG_ERROR("Failed to create descriptors");
-    //     return false;
-    // }
+    err = vulkan_descriptor_init(p_engine->device, &p_engine->draw_image, &p_engine->desc_alloc,
+        &p_engine->draw_img_desc, &p_engine->draw_img_desc_layout);
+    if(err.code != 0)
+        return err;
+
+    vulkan_desc_del_t* p_vulkan_desc_del = (vulkan_desc_del_t*)malloc(sizeof(vulkan_desc_del_t));
+    p_vulkan_desc_del->device = p_engine->device;
+    p_vulkan_desc_del->pool = p_engine->desc_alloc.pool;
+    p_vulkan_desc_del->desc_layout = p_engine->draw_img_desc_layout;
+
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_vulkan_desc_del, vulkan_descriptor_destroy);
+    if(err.code != 0) {
+        vulkan_descriptor_destroy(p_vulkan_desc_del);
+        return err;
+    }
 
     // Just playing around with cglm
     // vec3 vectorX = {1.0f, .0f, .0f};
