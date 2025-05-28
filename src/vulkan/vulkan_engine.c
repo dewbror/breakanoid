@@ -21,7 +21,7 @@
 
 #include "util/deletion_stack.h"
 
-#include "SDL/SDL_backend.h"
+#include "SDL/sdl_backend.h"
 
 #define HEIGHT 1080
 #define WIDTH 1920
@@ -61,7 +61,8 @@ static bool create_descriptors(vulkan_engine_t* p_engine);
 
 error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     // Check if p_engine is NULL
-    if(p_engine == NULL) return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_engine is NULL", __func__);
+    if(p_engine == NULL)
+        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_engine is NULL", __func__);
 
     // Set window extent, this will be performed from some settings file in the future.
     p_engine->window_extent.height = HEIGHT;
@@ -75,20 +76,22 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     error_t err;
 
     // Initialize SDL
-    err = SDL_backend_init(
-        &p_engine->p_SDL_window, (int)p_engine->window_extent.width, (int)p_engine->window_extent.height
+    err = sdl_backend_init(
+        &p_engine->p_window, (int)p_engine->window_extent.width, (int)p_engine->window_extent.height
     );
-    if(err.code != 0) return err;
+    if(err.code != 0)
+        return err;
 
-    err = deletion_stack_push(p_engine->p_main_del_stack, p_engine->p_SDL_window, SDL_backend_destroy);
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_engine->p_window, sdl_backend_destroy);
     if(err.code != 0) {
-        SDL_backend_destroy(p_engine->p_SDL_window);
+        sdl_backend_destroy(p_engine->p_window);
         return err;
     }
 
     // Create vulkan instance
     err = vulkan_instance_init(&p_engine->instance);
-    if(err.code != 0) return err;
+    if(err.code != 0)
+        return err;
 
     // Possibly move deletion to inside the init functions
     err = deletion_stack_push(p_engine->p_main_del_stack, p_engine->instance, vulkan_instance_destroy);
@@ -100,9 +103,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     // Setup debug messenger
 #ifndef NDEBUG
     err = vulkan_instance_debug_msg_init(p_engine->instance, &p_engine->debug_msg);
-    if(err.code != 0) {
+    if(err.code != 0)
         return err;
-    }
 
     vulkan_instance_debug_msg_del_struct_t* p_debug_msg_del_struct =
         (vulkan_instance_debug_msg_del_struct_t*)malloc(sizeof(vulkan_instance_debug_msg_del_struct_t));
@@ -117,7 +119,7 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
 #endif
 
     // Create SDL window surface
-    if(!SDL_Vulkan_CreateSurface(p_engine->p_SDL_window, p_engine->instance, VK_NULL_HANDLE, &p_engine->surface))
+    if(!SDL_Vulkan_CreateSurface(p_engine->p_window, p_engine->instance, VK_NULL_HANDLE, &p_engine->surface))
         return error_init(
             ERR_SRC_SDL, SDL_ERR_VULKAN_CREATE_SURFACE, "Failed to create vulkan rendering surface: %s", SDL_GetError()
         );
@@ -128,14 +130,17 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     p_surface_del_struct->surface = p_engine->surface;
 
     err = deletion_stack_push(p_engine->p_main_del_stack, p_surface_del_struct, surface_destroy);
-    if(err.code != 0) return err;
+    if(err.code != 0)
+        return err;
 
     // Maybe move into vulkan_device_init?
     err = vulkan_physical_device_init(p_engine->instance, p_engine->surface, &p_engine->physical_device);
-    if(err.code != 0) return err;
+    if(err.code != 0)
+        return err;
 
     err = vulkan_device_init(p_engine->surface, p_engine->physical_device, &p_engine->device, &p_engine->queues);
-    if(err.code != 0) return err;
+    if(err.code != 0)
+        return err;
 
     err = deletion_stack_push(p_engine->p_main_del_stack, p_engine->device, vulkan_device_destroy);
     if(err.code != 0) {
@@ -144,10 +149,11 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     }
 
     err = vulkan_swapchain_init(
-        p_engine->device, p_engine->physical_device, p_engine->surface, p_engine->p_SDL_window,
+        p_engine->device, p_engine->physical_device, p_engine->surface, p_engine->p_window,
         &p_engine->vulkan_swapchain
     );
-    if(err.code != 0) return err;
+    if(err.code != 0)
+        return err;
 
     vulkan_swapchain_del_struct_t* p_swapchain_del_struct =
         (vulkan_swapchain_del_struct_t*)malloc(sizeof(vulkan_swapchain_del_struct_t));
@@ -182,10 +188,12 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
 
     // Create commands
     err = vulkan_cmd_frame_init(p_engine->device, &p_engine->queues, p_engine->p_frames);
-    if(err.code != 0) return err;
+    if(err.code != 0)
+        return err;
 
     err = vulkan_cmd_imm_init(p_engine->device, &p_engine->queues, &p_engine->imm_cmd_pool, &p_engine->imm_cmd_buffer);
-    if(err.code != 0) return err;
+    if(err.code != 0)
+        return err;
 
     for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
         cmd_pool_del_struct_t* p_cmd_pool = (cmd_pool_del_struct_t*)malloc(sizeof(cmd_pool_del_struct_t));
@@ -211,7 +219,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
 
     // Create sync structures
     err = vulkan_sync_frame_init(p_engine->device, p_engine->p_frames);
-    if(err.code != 0) return err;
+    if(err.code != 0)
+        return err;
 
     vulkan_sync_frame_del_struct_t* p_frame = malloc(sizeof(vulkan_sync_frame_del_struct_t));
     p_frame->device = p_engine->device;
@@ -225,7 +234,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
 
     // Create sync structures
     err = vulkan_sync_imm_init(p_engine->device, &p_engine->imm_fence);
-    if(err.code != 0) return err;
+    if(err.code != 0)
+        return err;
 
     fence_del_struct_t* p_fence = (fence_del_struct_t*)malloc(sizeof(fence_del_struct_t));
     p_fence->device = p_engine->device;

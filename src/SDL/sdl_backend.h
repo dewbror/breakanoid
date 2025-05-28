@@ -10,13 +10,13 @@
  *
  * \return True if successful, else false.
  */
-error_t SDL_backend_init(struct SDL_Window** pp_window, int width, int height);
+error_t sdl_backend_init(struct SDL_Window** pp_window, int width, int height);
 
 /**
  * \brief Destroy SDL backend.
  *
  * \param[in] p_void_window Pointer to SDL window to be destroyed.
  */
-void SDL_backend_destroy(void* p_void_window);
+void sdl_backend_destroy(void* p_void_window);
 
 #endif // SDL_BACKEND_H_

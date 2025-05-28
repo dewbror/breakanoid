@@ -4,9 +4,9 @@
 #include "error/error.h"
 #include "error/sdl_error.h"
 #include "logger.h"
-#include "SDL/SDL_backend.h"
+#include "SDL/sdl_backend.h"
 
-error_t SDL_backend_init(SDL_Window** pp_window, int width, int height) {
+error_t sdl_backend_init(SDL_Window** pp_window, int width, int height) {
     // Initialize SDL
     if(!SDL_InitSubSystem(SDL_INIT_VIDEO))
         return error_init(
@@ -30,7 +30,7 @@ error_t SDL_backend_init(SDL_Window** pp_window, int width, int height) {
     return SUCCESS;
 }
 
-void SDL_backend_destroy(void* p_void_window) {
+void sdl_backend_destroy(void* p_void_window) {
     LOG_DEBUG("Callback: %s", __func__);
 
     if(p_void_window == NULL) {

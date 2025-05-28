@@ -12,7 +12,7 @@
  */
 typedef struct vulkan_engine_s {
     struct deletion_stack_s* p_main_del_stack;
-    struct SDL_Window* p_SDL_window;
+    struct SDL_Window* p_window;
     VkExtent2D window_extent;
     VkInstance instance;
     VkDebugUtilsMessengerEXT debug_msg;
