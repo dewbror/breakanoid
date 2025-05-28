@@ -1,16 +1,23 @@
+#include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <vulkan/vulkan_core.h>
 
+#include "error/error.h"
+#include "error/vulkan_error.h"
 #include "logger.h"
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_image.h"
 
-bool vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint32_t width, uint32_t height, allocated_image_t* p_allocated_image) {
-    if(device == NULL) {
-        LOG_ERROR("vulkan_image_create: device is NULL");
-        return false;
-    }
+error_t vulkan_image_create(
+    VkDevice device, VkPhysicalDevice physical_device, uint32_t width, uint32_t height,
+    allocated_image_t* p_allocated_image
+) {
+    if(device == NULL)
+        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: device is NULL", __func__);
+
+    if(physical_device == NULL)
+        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: physical_device is NULL", __func__);
 
     // CREATE DRAW IMAGE
 
@@ -34,17 +41,15 @@ bool vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint
     img_info.extent.depth = 1;
     img_info.mipLevels = 1;
     img_info.arrayLayers = 1;
-    img_info.format = p_allocated_image->format;      // Or your needed format
+    img_info.format = p_allocated_image->format;        // Or your needed format
     img_info.tiling = VK_IMAGE_TILING_OPTIMAL;          // Usually optimal for GPU use
     img_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // = 0 default value
     img_info.usage = draw_image_usage;                  // Example
     img_info.samples = VK_SAMPLE_COUNT_1_BIT;
     img_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // = 0 default value
 
-    if(vkCreateImage(device, &img_info, VK_NULL_HANDLE, &p_allocated_image->image) != VK_SUCCESS) {
-        LOG_ERROR("Failed to create draw image");
-        return false;
-    }
+    if(vkCreateImage(device, &img_info, VK_NULL_HANDLE, &p_allocated_image->image) != VK_SUCCESS)
+        return error_init(ERR_SRC_VULKAN, VULKAN_ERR_IMAGE, "Failed to create draw image");
 
     // For the draw image, we want to allocate it on the GPU local memory
     // ALLOCATE MEMORY ON THE GPU
@@ -74,7 +79,6 @@ bool vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint
 
     // VkDeviceMemory img_memory = NULL;
     vkAllocateMemory(device, &alloc_info, VK_NULL_HANDLE, &p_allocated_image->mem);
-
     vkBindImageMemory(device, p_allocated_image->image, p_allocated_image->mem, 0);
 
     // CREATE DRAW IMAGE VIEW
@@ -91,31 +95,29 @@ bool vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint
     img_view_info.subresourceRange.layerCount = 1;
     img_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-    if(vkCreateImageView(device, &img_view_info, VK_NULL_HANDLE, &p_allocated_image->image_view) !=
-       VK_SUCCESS) {
-        LOG_ERROR("Failed to create draw image view");
-        return false;
-    }
+    if(vkCreateImageView(device, &img_view_info, VK_NULL_HANDLE, &p_allocated_image->image_view) != VK_SUCCESS)
+        return error_init(ERR_SRC_VULKAN, VULKAN_ERR_IMAGE_VIEW, "Failed to create draw image view");
 
     LOG_INFO("Image views created");
-    return true;
+
+    return SUCCESS;
 }
 
 // static bool get_image_view(
-//     vulkan_engine_t* p_engine, VkImageView image_view, VkImage image, VkFormat format, VkImageAspectFlags aspect_flags,
-//     uint32_t mip_levels) {
+//     vulkan_engine_t* p_engine, VkImageView image_view, VkImage image, VkFormat format, VkImageAspectFlags
+//     aspect_flags, uint32_t mip_levels) {
 //     // TODO: Sanatize inputs
-// 
+//
 //     // Fill image view create info
 //     VkImageViewCreateInfo view_info = {0};
 //     view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 //     view_info.image = image;
-// 
+//
 //     // The viewType and format fields specify how the image data should be interpreted. The viewType parameter
 //     // allows you to treat images as 1D textures, 2D textures, 3D textures and cube maps.
 //     view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
 //     view_info.format = format;
-// 
+//
 //     // The components field allows you to swizzle the color channels around. For example, you can map all of the
 //     // channels to the red channel for a monochrome texture. You can also map constant values of 0 and 1 to a
 //     // channel. In our case we’ll stick to the default mapping.
@@ -123,7 +125,7 @@ bool vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint
 //     view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
 //     view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
 //     view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-// 
+//
 //     // The subresourceRange field describes what the image’s purpose is and which part of the image should be
 //     // accessed. Our images will be used as color targets without any mipmapping levels or multiple layers.
 //     view_info.subresourceRange.aspectMask = aspect_flags;
@@ -131,13 +133,13 @@ bool vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint
 //     view_info.subresourceRange.levelCount = mip_levels;
 //     view_info.subresourceRange.baseArrayLayer = 0;
 //     view_info.subresourceRange.layerCount = 1;
-// 
+//
 //     // Create image view
 //     if(vkCreateImageView(p_engine->device, &view_info, VK_NULL_HANDLE, &image_view) != VK_SUCCESS) {
 //         LOG_ERROR("Failed to create image view");
 //         return false;
 //     }
-// 
+//
 //     LOG_DEBUG("Image view created");
 //     return true;
 // }
@@ -145,12 +147,26 @@ bool vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint
 void vulkan_image_destroy(void* p_void_allocated_image_del_struct) {
     LOG_DEBUG("Callback: vulkan_destroy_image");
 
-    // Cast pointer
-    allocated_image_del_strut_t* p_allocated_image_del_struct = (allocated_image_del_strut_t*)p_void_allocated_image_del_struct;
+    if(p_void_allocated_image_del_struct == NULL) {
+        LOG_ERROR("%s: p_void_allocated_image_del_struct is NULL", __func__);
+        return;
+    }
 
-    vkDestroyImage(p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image, VK_NULL_HANDLE);
-    vkFreeMemory(p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.mem, VK_NULL_HANDLE);
-    vkDestroyImageView(p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image_view, VK_NULL_HANDLE);
+    // NULL check struct content
+
+    // Cast pointer
+    allocated_image_del_strut_t* p_allocated_image_del_struct =
+        (allocated_image_del_strut_t*)p_void_allocated_image_del_struct;
+
+    vkDestroyImage(
+        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image, VK_NULL_HANDLE
+    );
+    vkFreeMemory(
+        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.mem, VK_NULL_HANDLE
+    );
+    vkDestroyImageView(
+        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image_view, VK_NULL_HANDLE
+    );
 
     free(p_allocated_image_del_struct);
     p_allocated_image_del_struct = NULL;

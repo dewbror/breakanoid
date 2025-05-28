@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <vulkan/vulkan_core.h>
 
+#include "error/error.h"
+
 #include "vulkan/vulkan_types.h"
 
 /**
@@ -14,7 +16,7 @@
  * \param[out] p_physical_device Pointer to the physical device to be initiated.
  * \return True if successful, else false.
  */
-bool vulkan_physical_device_init(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* p_physical_device);
+error_t vulkan_physical_device_init(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* p_physical_device);
 
 /**
  * \brief Check and get device swapchain support.
@@ -58,7 +60,7 @@ bool vulkan_device_get_queue_families(
  * \param[out] p_queues Pointer to the queue_family_data_t which will hold the queue information.
  * \return True if successful, else false.
  */
-bool vulkan_device_init(
+error_t vulkan_device_init(
     VkSurfaceKHR surface, VkPhysicalDevice physical_device, VkDevice* p_device,
     queue_family_data_t* p_queue_family_data);
 /**

@@ -5,6 +5,8 @@
 #include <vulkan/vulkan_core.h>
 #include <SDL3/SDL_video.h>
 
+#include "error/error.h"
+#include "error/vulkan_error.h"
 #include "logger.h"
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_device.h"
@@ -43,18 +45,31 @@ static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR* p_presen
  */
 static VkExtent2D choose_swapchain_extent(SDL_Window* p_window, VkSurfaceCapabilitiesKHR capabilities);
 
-bool vulkan_swapchain_init(
-    VkSurfaceKHR surface, SDL_Window* p_window, VkPhysicalDevice physical_device, VkDevice device,
-    vulkan_swapchain_t* p_vulkan_swapchain) {
+error_t vulkan_swapchain_init(
+    VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface, SDL_Window* p_window,
+    vulkan_swapchain_t* p_vulkan_swapchain
+) {
+
+    if(device == NULL)
+        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: device is NULL", __func__);
+
+    if(physical_device == NULL)
+        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: physical_device is NULL", __func__);
+
+    if(surface == NULL)
+        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: surface is NULL", __func__);
+
+    if(p_window == NULL)
+        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_window is NULL", __func__);
+
+    if(p_vulkan_swapchain == NULL)
+        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_vulkan_swapchain is NULL", __func__);
 
     // Swapchain support has already been checked but we run this function again to retrieve the swapchain support
     // details (the surface formats and present modes)
     swapchain_support_details_t swapchain_support = {0};
-    if(!vulkan_device_get_swapchain_support(surface, physical_device, &swapchain_support)) {
-        // TODO: Move LOG_ERROR to inside query_swapchain_support
-        LOG_ERROR("Swapchain not supported by device");
-        return false;
-    }
+    if(!vulkan_device_get_swapchain_support(surface, physical_device, &swapchain_support))
+        return error_init(ERR_SRC_CORE, ERR_TEMP, "Swapchain not supported by device");
 
     // Choose which surface formats we want to use
     VkSurfaceFormatKHR surface_format =
@@ -68,10 +83,8 @@ bool vulkan_swapchain_init(
     VkExtent2D extent = choose_swapchain_extent(p_window, swapchain_support.capabilities);
 
     // Check that the extent is non-zero
-    if(extent.height == 0 && extent.width == 0) {
-        LOG_ERROR("The swapchain extent is zero in one/both dimensions");
-        return false;
-    }
+    if(extent.height == 0 && extent.width == 0)
+        return error_init(ERR_SRC_CORE, ERR_WINDOW_EXTENT, "The swapchain extent is zero in one/both dimensions");
 
     // Aside from these properties we also have to decide how many images we would like to have in the swap chain.
     // The implementation specifies the minimum number that it requires to function. However, simply sticking to
@@ -82,9 +95,9 @@ bool vulkan_swapchain_init(
 
     // We should also make sure to not exceed the maximum number of images while doing this, where 0 is a special
     // value that means that there is no maximum.
-    if(swapchain_support.capabilities.maxImageCount > 0 && image_count > swapchain_support.capabilities.maxImageCount) {
+    if(swapchain_support.capabilities.maxImageCount > 0 && image_count > swapchain_support.capabilities.maxImageCount)
         image_count = swapchain_support.capabilities.maxImageCount;
-    }
+
     LOG_DEBUG("Minimum number of swapchain images to create: %u", image_count);
 
     // Create the swapchain
@@ -154,10 +167,9 @@ bool vulkan_swapchain_init(
 
     // Create swap chain.
     if(vkCreateSwapchainKHR(device, &create_swapchain_info, VK_NULL_HANDLE, &p_vulkan_swapchain->swapchain) !=
-       VK_SUCCESS) {
-        LOG_ERROR("Failed to create swapchain");
-        return false;
-    }
+       VK_SUCCESS)
+        return error_init(ERR_SRC_VULKAN, VULKAN_ERR_SWAPCHAIN, "Failed to create swapchain");
+
     LOG_INFO("Swapchain created");
 
     // The swap chain has been created now, so all that remains is retrieving the handles of the VkImages in it.
@@ -168,6 +180,7 @@ bool vulkan_swapchain_init(
     // we’ll first query the final number of images with vkGetSwapchainImagesKHR, then resize the container and
     // finally call it again to retrieve the handles.
     vkGetSwapchainImagesKHR(device, p_vulkan_swapchain->swapchain, &image_count, VK_NULL_HANDLE);
+
     LOG_DEBUG("Number of swapchain images created: %u", image_count);
 
     // Allocate array to hole swapchain images
@@ -184,21 +197,21 @@ bool vulkan_swapchain_init(
     // These are allocated in get swapchain support
     free(swapchain_support.formats);
     swapchain_support.formats = NULL;
+
     free(swapchain_support.present_modes);
     swapchain_support.present_modes = NULL;
 
-    // CREATE SWAPCHAIN IMAGE VIEWS
-
     // Allocate array to hold image views
     p_vulkan_swapchain->p_image_views = (VkImageView*)malloc(p_vulkan_swapchain->images_count * sizeof(VkImageView));
-    if(p_vulkan_swapchain->p_image_views == NULL) {
-        LOG_ERROR(
-            "Failed to allocate memory of size %lu: %s", p_vulkan_swapchain->images_count * sizeof(VkImageView),
-            strerror(errno));
-    }
+    if(p_vulkan_swapchain->p_image_views == NULL)
+        return error_init(
+            ERR_SRC_CORE, ERR_MALLOC, "%s: Failed to allocate memory of size %lu", __func__,
+            p_vulkan_swapchain->images_count * sizeof(VkImageView)
+        );
 
     // create image views
     LOG_DEBUG("Creating swapchain image views");
+
     for(uint32_t i = 0; i < p_vulkan_swapchain->images_count; ++i) {
         LOG_DEBUG("   index: %d", i);
         // get_image_view(p_engine, p_engine->swapchain_images.p_image_views[i], p_engine->swapchain_images.p_images[i],
@@ -229,20 +242,18 @@ bool vulkan_swapchain_init(
         view_info.subresourceRange.layerCount = 1;
 
         // Create image view
-        if(vkCreateImageView(device, &view_info, VK_NULL_HANDLE, &p_vulkan_swapchain->p_image_views[i]) != VK_SUCCESS) {
-            LOG_ERROR("Failed to create image view");
-            return false;
-        }
+        if(vkCreateImageView(device, &view_info, VK_NULL_HANDLE, &p_vulkan_swapchain->p_image_views[i]) != VK_SUCCESS)
+            return error_init(ERR_SRC_VULKAN, VULKAN_ERR_IMAGE_VIEW, "Failed to create image view");
     }
 
-    return true;
+    return SUCCESS;
 }
 
 void vulkan_swapchain_destroy(void* p_void_vulkan_swapchain_del_struct) {
-    LOG_DEBUG("Callback: vulkan_swapchain_destroy");
+    LOG_DEBUG("Callback: %s", __func__);
 
     if(p_void_vulkan_swapchain_del_struct == NULL) {
-        LOG_ERROR("vulkan_swapchain_destroy: p_void_vulkan_swapchain_del_struct is NULL");
+        LOG_ERROR("%s: p_void_vulkan_swapchain_del_struct is NULL", __func__);
         return;
     }
 
@@ -251,19 +262,19 @@ void vulkan_swapchain_destroy(void* p_void_vulkan_swapchain_del_struct) {
         (vulkan_swapchain_del_struct_t*)p_void_vulkan_swapchain_del_struct;
 
     if(p_vulkan_swapchain_del_struct->device == NULL) {
-        LOG_ERROR("vulkan_swapchain_destroy: device is NULL");
+        LOG_ERROR("%s: device is NULL", __func__);
         return;
     }
 
     if(p_vulkan_swapchain_del_struct->vulkan_swapchain.swapchain == NULL) {
-        LOG_ERROR("vulkan_swapchain_destroy: swapchain is NULL");
+        LOG_ERROR("%s: swapchain is NULL", __func__);
         return;
     }
 
     // Destroy swapchain
     vkDestroySwapchainKHR(
-        p_vulkan_swapchain_del_struct->device, p_vulkan_swapchain_del_struct->vulkan_swapchain.swapchain,
-        VK_NULL_HANDLE);
+        p_vulkan_swapchain_del_struct->device, p_vulkan_swapchain_del_struct->vulkan_swapchain.swapchain, VK_NULL_HANDLE
+    );
 
     free(p_vulkan_swapchain_del_struct // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
              ->vulkan_swapchain.p_images);
@@ -273,7 +284,8 @@ void vulkan_swapchain_destroy(void* p_void_vulkan_swapchain_del_struct) {
         LOG_DEBUG("    Destroying swapchain image view, index: %u", i);
         vkDestroyImageView(
             p_vulkan_swapchain_del_struct->device, p_vulkan_swapchain_del_struct->vulkan_swapchain.p_image_views[i],
-            VK_NULL_HANDLE);
+            VK_NULL_HANDLE
+        );
     }
 
     free(p_vulkan_swapchain_del_struct // NOLINT(bugprone-multi-level-implicit-pointer-conversion)

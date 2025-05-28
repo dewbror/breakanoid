@@ -1,7 +1,7 @@
 #ifndef SDL_BACKEND_H_
 #define SDL_BACKEND_H_
 
-#include <stdbool.h>
+#include "error/error.h"
 
 /**
  * Initiate the SDL "backend".
@@ -10,7 +10,7 @@
  *
  * \return True if successful, else false.
  */
-bool SDL_backend_init(struct SDL_Window** pp_window, int width, int height);
+error_t SDL_backend_init(struct SDL_Window** pp_window, int width, int height);
 
 /**
  * \brief Destroy SDL backend.

@@ -13,10 +13,11 @@
 #include <stb_image.h>
 
 // My headers
-#include "vulkan/vulkan_engine.h"
-#include "game/game.h"
+#include "error/error.h"
 #include "version.h"
 #include "logger.h"
+#include "vulkan/vulkan_engine.h"
+#include "game/game.h"
 
 int main(int argc, char** argv) {
     // UNUSED
@@ -24,37 +25,47 @@ int main(int argc, char** argv) {
     (void)argv;
 
     logger_open(NULL);
+
     LOG_DEBUG("Entering main()");
 
 #ifndef NDEBUG
     LOG_INFO("This is a debug build");
 #endif
+
     LOG_INFO("Build version: %s+%s.%s", break_VERSION, GIT_BRANCH, GIT_COMMIT_HASH);
 
+    int success = 0;
+
     vulkan_engine_t engine;
-    bool success = vulkan_engine_init(&engine);
-    if(success) {
-        // Start game
-        game_t game;
-        success = game_init(&engine, &game);
-        game_destroy(&game);
+    error_t err = vulkan_engine_init(&engine);
+    success += err.code;
+    if(err.code != 0) {
+        LOG_ERROR("Failed to initiate vulkan engine: %s", err.msg);
+        error_destroy(&err);
     } else {
-        LOG_ERROR("Failed to initiate vulkan engine");
+        // vulkan engine initiated successfully, start game
+        game_t game;
+        game_init(&engine, &game);
+        game_destroy(&game);
     }
 
     // Destroy vulkan engine
-    if(!vulkan_engine_destroy(&engine) || !success) {
-        LOG_ERROR("Exiting with failure");
-        logger_close();
-        return EXIT_FAILURE;
+    err = vulkan_engine_destroy(&engine);
+    success += err.code;
+    if(err.code != 0) {
+        LOG_ERROR("Failed to destroy vulkan engine: %s", err.msg);
+        error_destroy(&err);
     }
 
+    // Close logger
     logger_close();
-    // if(!success) {
-    //     LOG_ERROR("Exiting with failure");
-    //     return EXIT_FAILURE;
-    // }
 
-    LOG_INFO("Exiting with success");
-    return EXIT_SUCCESS;
+    // Exit program
+    if(success != 0) {
+        LOG_ERROR("Exiting with failure");
+        return EXIT_FAILURE;
+    } else {
+        LOG_INFO("Exiting with success");
+        return EXIT_SUCCESS;
+    }
 }

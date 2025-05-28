@@ -1,7 +1,7 @@
 #ifndef DELETION_STACK_H_
 #define DELETION_STACK_H_
 
-#include <stdbool.h>
+#include "error/error.h"
 
 /**
  * A deletion node, holds a pointer to the resource which is to be deleted, a pointer to the function which will deletes
@@ -22,29 +22,29 @@ typedef struct deletion_stack_s {
 } deletion_stack_t;
 
 /**
- * Allocate a new deletion_queue on the heap, the deletion queue is deleted when using deletion_queue_flush.
+ * Allocate a new deletion stack on the heap, the deletion stack is freed when using deletion_stack_flush.
  *
- * \return Pointer to newly allocated deletion_queue.
+ * \return Pointer to newly allocated deletion stack.
  */
 deletion_stack_t* deletion_stack_init(void);
 
 /**
- * Allocate a new deletion node on the heap and add it to the end of the deletion queue.
+ * Allocate a new deletion node on the heap and push it onto the deletion stack.
  *
- * \param[in] p_queue Pointer to the deletion queue the new node is added to.
+ * \param[in] p_queue Pointer to the deletion stack the new node is pushed to.
  * \param[in] p_resource Pointer to the resource to be deleted by the deletion function.
  * \param[in] deletion_func Pointer to the function that will delete the resource.
  * \returns True if successful, false if failed.
  */
-bool deletion_stack_push(deletion_stack_t* p_queue, void* p_resource, void (*deletion_func)(void*));
+error_t deletion_stack_push(deletion_stack_t* p_stack, void* p_resource, void (*deletion_func)(void*));
 
 /**
- * Flush the deletion queue. Callbacks the deletion functions in the deletion queue from last to first. *pp_queue is
+ * Flush the deletion stack. Callbacks the deletion functions in the deletion stack from last to first. *pp_queue is
  * freed and set to NULL
  *
- * \param[in] pp_queue Double pointer to the deletion_queue to flush.
+ * \param[in] pp_queue Double pointer to the deletion stack to flush.
  * \return True if successful, false if failed.
  */
-bool deletion_stack_flush(deletion_stack_t** pp_queue);
+error_t deletion_stack_flush(deletion_stack_t** pp_stack);
 
 #endif // DELETION_STACK_H_

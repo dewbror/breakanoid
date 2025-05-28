@@ -1,8 +1,9 @@
 #ifndef VULKAN_INSTANCE_H_
 #define VULKAN_INSTANCE_H_
 
-#include <stdbool.h>
 #include <vulkan/vulkan_core.h>
+
+#include "error/error.h"
 
 /**
  * Struct used for deleting a debug messenger.
@@ -18,7 +19,7 @@ typedef struct vulkan_instance_debug_msg_del_struct_s {
  * \param[out] p_instance Pointer to the Vkinstance to be initiated.
  * \return True if successful, else false.
  */
-bool vulkan_instance_init(VkInstance* p_instance);
+error_t vulkan_instance_init(VkInstance* p_instance);
 
 /**
  * \brief Destroy the vulkan instance.
@@ -39,7 +40,7 @@ void vulkan_instance_destroy(void* p_void_instance);
  * \param[out] p_debug_messenger Pointer to the debug messenger to be initiated.
  * \return True if successful, else false.
  */
-bool vulkan_instance_debug_msg_init(VkInstance instance, VkDebugUtilsMessengerEXT* p_debug_messenger);
+error_t vulkan_instance_debug_msg_init(VkInstance instance, VkDebugUtilsMessengerEXT* p_debug_messenger);
 
 /**
  * \brief Destroy a debug messenger.

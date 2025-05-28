@@ -1,8 +1,9 @@
 #ifndef VULKAN_SYNCH_H_
 #define VULKAN_SYNCH_H_
 
-#include <stdbool.h>
 #include <vulkan/vulkan_core.h>
+
+#include "error/error.h"
 
 #include "vulkan/vulkan_types.h"
 
@@ -21,11 +22,11 @@ typedef struct vulkan_sync_frame_del_struct_s {
     frame_data_t* p_frames;
 } vulkan_sync_frame_del_struct_t;
 
-bool vulkan_sync_frame_init(VkDevice device, frame_data_t* p_frames);
+error_t vulkan_sync_frame_init(VkDevice device, frame_data_t* p_frames);
 
 void vulkan_sync_frame_destroy(void* p_void_vulkan_sync_frame_del_struct);
 
-bool vulkan_sync_imm_init(VkDevice device, VkFence* p_imm_fence);
+error_t vulkan_sync_imm_init(VkDevice device, VkFence* p_imm_fence);
 
 void vulkan_sync_semaphore_destroy(void* p_void_semaphore_del_struct);
 

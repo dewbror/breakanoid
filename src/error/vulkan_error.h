@@ -1,0 +1,20 @@
+#ifndef VULKAN_ERROR_H_
+#define VULKAN_ERROR_H_
+
+/**
+ * The Vulkan error codes
+ */
+typedef enum {
+    VULKAN_ERR_NONE = 0,
+    VULKAN_ERR_INSTANCE,
+    VULKAN_ERR_DEVICE,
+    VULKAN_ERR_SWAPCHAIN,
+    VULKAN_ERR_IMAGE_VIEW,
+    VULKAN_ERR_IMAGE,
+    VULKAN_ERR_CMD_POOL,
+    VULKAN_ERR_CMD_BUF,
+    VULKAN_ERR_FENCE,
+    VULKAN_ERR_SEMAPHORE
+} vulkan_error_code_t;
+
+#endif // VULKAN_ERROR_H_

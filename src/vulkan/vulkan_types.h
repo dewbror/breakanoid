@@ -32,7 +32,6 @@ typedef struct swapchain_support_details_s {
     size_t present_modes_count;
 } swapchain_support_details_t;
 
-
 /**
  * A struct containing everything relevant for the swapchain.
  */
@@ -60,6 +59,9 @@ typedef struct allocated_image_s {
     VkFormat format;
 } allocated_image_t;
 
+/**
+ * A struct for holden per frame data and vulkan handles
+ */
 typedef struct frame_data_s {
     VkCommandPool cmd_pool;
     VkCommandBuffer main_cmd_buffer;

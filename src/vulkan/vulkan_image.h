@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include "error/error.h"
+
 #include "vulkan/vulkan_types.h"
 
 typedef struct allocated_image_del_struct_s {
@@ -13,7 +15,7 @@ typedef struct allocated_image_del_struct_s {
 /**
  * \brief Create vulkan image.
  */
-bool vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint32_t width, uint32_t height, allocated_image_t* p_allocated_image);
+error_t vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint32_t width, uint32_t height, allocated_image_t* p_allocated_image);
 
 /**
  * Destroy vulkan image.

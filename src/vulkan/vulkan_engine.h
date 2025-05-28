@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <vulkan/vulkan_core.h>
 
+#include "error/error.h"
 #include "vulkan/vulkan_types.h"
 
 /**
@@ -23,7 +24,7 @@ typedef struct vulkan_engine_s {
     vulkan_swapchain_t vulkan_swapchain;
     allocated_image_t draw_image;
     long frame_count;
-    frame_data_t frames[FRAMES_IN_FLIGHT]; // TODO: Rename to p_frames
+    frame_data_t p_frames[FRAMES_IN_FLIGHT]; // TODO: Rename to p_frames
     VkCommandPool imm_cmd_pool;
     VkCommandBuffer imm_cmd_buffer;
     VkFence imm_fence;
@@ -37,7 +38,7 @@ typedef struct vulkan_engine_s {
  *
  * \return True if successful, false if failed.
  */
-bool vulkan_engine_init(vulkan_engine_t* p_engine);
+error_t vulkan_engine_init(vulkan_engine_t* p_engine);
 
 /**
  * Used to delete a vulkan_engine. All deletion/destruction of objects is currently handled by the deletion queue. All
@@ -47,5 +48,5 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine);
  *
  * \return True if successful, false otherwise
  */
-bool vulkan_engine_destroy(vulkan_engine_t* p_engine);
+error_t vulkan_engine_destroy(vulkan_engine_t* p_engine);
 #endif // VULKAN_ENGINE_H_

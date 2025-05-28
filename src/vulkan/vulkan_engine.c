@@ -6,15 +6,21 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include "logger.h"
+
+#include "error/error.h"
+#include "error/sdl_error.h"
+
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_instance.h"
 #include "vulkan/vulkan_device.h"
 #include "vulkan/vulkan_swapchain.h"
 #include "vulkan/vulkan_image.h"
 #include "vulkan/vulkan_cmd.h"
-#include "vulkan/vulkan_synch.h"
+#include "vulkan/vulkan_sync.h"
 #include "vulkan/vulkan_engine.h"
+
 #include "util/deletion_stack.h"
+
 #include "SDL/SDL_backend.h"
 
 #define HEIGHT 1080
@@ -53,12 +59,9 @@ static void surface_destroy(void* p_void_surface_del_struct);
  */
 static bool create_descriptors(vulkan_engine_t* p_engine);
 
-bool vulkan_engine_init(vulkan_engine_t* p_engine) {
+error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     // Check if p_engine is NULL
-    if(p_engine == NULL) {
-        LOG_ERROR("vulkan_engine_init: p_engine is NULL");
-        return false;
-    }
+    if(p_engine == NULL) return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_engine is NULL", __func__);
 
     // Set window extent, this will be performed from some settings file in the future.
     p_engine->window_extent.height = HEIGHT;
@@ -66,42 +69,39 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
 
     // Allocate main deletion queue
     p_engine->p_main_del_stack = deletion_stack_init();
-    // This NULL check is technically unnecessary since it is also performed inside deletion_queue_alloc
-    if(p_engine->p_main_del_stack == NULL) {
-        LOG_ERROR("Vulkan engine deletion queue is NULL after allocation");
-        return false;
-    }
+    if(p_engine->p_main_del_stack == NULL)
+        return error_init(ERR_SRC_CORE, ERR_DELETION_STACK_INIT, "%s: Failed to initiate deletion stack", __func__);
+
+    error_t err;
 
     // Initialize SDL
-    if(!SDL_backend_init(
-           &p_engine->p_SDL_window, (int)p_engine->window_extent.width, (int)p_engine->window_extent.height)) {
-        LOG_ERROR("Failed to initialize SDL backend");
-        return false;
-    }
+    err = SDL_backend_init(
+        &p_engine->p_SDL_window, (int)p_engine->window_extent.width, (int)p_engine->window_extent.height
+    );
+    if(err.code != 0) return err;
 
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine->p_SDL_window, SDL_backend_destroy)) {
-        LOG_ERROR("Failed to push deletion node");
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_engine->p_SDL_window, SDL_backend_destroy);
+    if(err.code != 0) {
         SDL_backend_destroy(p_engine->p_SDL_window);
-        return false;
+        return err;
     }
 
     // Create vulkan instance
-    if(!vulkan_instance_init(&p_engine->instance)) {
-        LOG_ERROR("Failed to create vulkan instance");
-        return false;
-    }
+    err = vulkan_instance_init(&p_engine->instance);
+    if(err.code != 0) return err;
 
     // Possibly move deletion to inside the init functions
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine->instance, vulkan_instance_destroy)) {
-        LOG_ERROR("Failed to push deletion node");
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_engine->instance, vulkan_instance_destroy);
+    if(err.code != 0) {
         vulkan_instance_destroy(p_engine->instance);
-        return false;
+        return err;
     }
 
     // Setup debug messenger
-    if(!vulkan_instance_debug_msg_init(p_engine->instance, &p_engine->debug_msg)) {
-        LOG_ERROR("Failed to setup debug messenger");
-        return false;
+#ifndef NDEBUG
+    err = vulkan_instance_debug_msg_init(p_engine->instance, &p_engine->debug_msg);
+    if(err.code != 0) {
+        return err;
     }
 
     vulkan_instance_debug_msg_del_struct_t* p_debug_msg_del_struct =
@@ -109,144 +109,139 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     p_debug_msg_del_struct->instance = p_engine->instance;
     p_debug_msg_del_struct->debug_msg = p_engine->debug_msg;
 
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_debug_msg_del_struct, vulkan_instance_debug_msg_destroy)) {
-        LOG_ERROR("Failed to push deletion callback");
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_debug_msg_del_struct, vulkan_instance_debug_msg_destroy);
+    if(err.code != 0) {
         vulkan_instance_debug_msg_destroy(p_debug_msg_del_struct);
-        return false;
+        return err;
     }
+#endif
 
     // Create SDL window surface
-    if(!SDL_Vulkan_CreateSurface(p_engine->p_SDL_window, p_engine->instance, VK_NULL_HANDLE, &p_engine->surface)) {
-        LOG_ERROR("Failed to create vulkan rendering surface: %s", SDL_GetError());
-        return false;
-    }
+    if(!SDL_Vulkan_CreateSurface(p_engine->p_SDL_window, p_engine->instance, VK_NULL_HANDLE, &p_engine->surface))
+        return error_init(
+            ERR_SRC_SDL, SDL_ERR_VULKAN_CREATE_SURFACE, "Failed to create vulkan rendering surface: %s", SDL_GetError()
+        );
     LOG_INFO("Vulkan rendering surface created");
 
     surface_del_struct_t* p_surface_del_struct = (surface_del_struct_t*)malloc(sizeof(surface_del_struct_t));
     p_surface_del_struct->instance = p_engine->instance;
     p_surface_del_struct->surface = p_engine->surface;
 
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_surface_del_struct, surface_destroy)) {
-        LOG_ERROR("Failed to push deletion node");
-        return false;
-    }
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_surface_del_struct, surface_destroy);
+    if(err.code != 0) return err;
 
     // Maybe move into vulkan_device_init?
-    if(!vulkan_physical_device_init(p_engine->instance, p_engine->surface, &p_engine->physical_device)) {
-        LOG_ERROR("Failed to create vulkan physical engine");
-        return false;
-    }
+    err = vulkan_physical_device_init(p_engine->instance, p_engine->surface, &p_engine->physical_device);
+    if(err.code != 0) return err;
 
-    if(!vulkan_device_init(p_engine->surface, p_engine->physical_device, &p_engine->device, &p_engine->queues)) {
-        LOG_ERROR("Failed to create vulkan physical engine");
-        return false;
-    }
+    err = vulkan_device_init(p_engine->surface, p_engine->physical_device, &p_engine->device, &p_engine->queues);
+    if(err.code != 0) return err;
 
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_engine->device, vulkan_device_destroy)) {
-        LOG_ERROR("Failed to push deletion node");
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_engine->device, vulkan_device_destroy);
+    if(err.code != 0) {
         vulkan_device_destroy(p_engine->device);
-        return false;
+        return err;
     }
 
-    if(!vulkan_swapchain_init(
-           p_engine->surface, p_engine->p_SDL_window, p_engine->physical_device, p_engine->device,
-           &p_engine->vulkan_swapchain)) {
-        LOG_ERROR("Failed to initiated vulkan swapchain");
-        return false;
-    }
+    err = vulkan_swapchain_init(
+        p_engine->device, p_engine->physical_device, p_engine->surface, p_engine->p_SDL_window,
+        &p_engine->vulkan_swapchain
+    );
+    if(err.code != 0) return err;
 
     vulkan_swapchain_del_struct_t* p_swapchain_del_struct =
         (vulkan_swapchain_del_struct_t*)malloc(sizeof(vulkan_swapchain_del_struct_t));
     p_swapchain_del_struct->device = p_engine->device;
     p_swapchain_del_struct->vulkan_swapchain = p_engine->vulkan_swapchain;
 
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_swapchain_del_struct, vulkan_swapchain_destroy)) {
-        LOG_ERROR("Failed to push deletion node");
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_swapchain_del_struct, vulkan_swapchain_destroy);
+    if(err.code != 0) {
         vulkan_swapchain_destroy(p_swapchain_del_struct);
-        return false;
+        return err;
     }
 
-    if(!vulkan_image_create(
-           p_engine->device, p_engine->physical_device, p_engine->window_extent.width, p_engine->window_extent.height,
-           &p_engine->draw_image)) {
+    err = vulkan_image_create(
+        p_engine->device, p_engine->physical_device, p_engine->window_extent.width, p_engine->window_extent.height,
+        &p_engine->draw_image
+    );
+    if(err.code != 0) {
         LOG_ERROR("Failed to create image");
-        return false;
+        return err;
     }
 
     allocated_image_del_strut_t* p_allocated_image_del_struct =
         (allocated_image_del_strut_t*)malloc(sizeof(allocated_image_del_strut_t));
     p_allocated_image_del_struct->device = p_engine->device;
     p_allocated_image_del_struct->allocated_image = p_engine->draw_image;
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_allocated_image_del_struct, vulkan_image_destroy)) {
-        LOG_ERROR("Failed to push onto deletion stack");
+
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_allocated_image_del_struct, vulkan_image_destroy);
+    if(err.code != 0) {
         vulkan_image_destroy(p_allocated_image_del_struct);
-        return false;
+        return err;
     }
 
     // Create commands
-    if(!vulkan_cmd_frame_init(p_engine->device, &p_engine->queues, p_engine->frames)) {
-        LOG_ERROR("Failed to create frame commands");
-        return false;
-    }
+    err = vulkan_cmd_frame_init(p_engine->device, &p_engine->queues, p_engine->p_frames);
+    if(err.code != 0) return err;
 
-    if(!vulkan_cmd_imm_init(p_engine->device, &p_engine->queues, &p_engine->imm_cmd_pool, &p_engine->imm_cmd_buffer)) {
-        LOG_ERROR("Failed to create frame commands");
-        return false;
-    }
+    err = vulkan_cmd_imm_init(p_engine->device, &p_engine->queues, &p_engine->imm_cmd_pool, &p_engine->imm_cmd_buffer);
+    if(err.code != 0) return err;
 
     for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
         cmd_pool_del_struct_t* p_cmd_pool = (cmd_pool_del_struct_t*)malloc(sizeof(cmd_pool_del_struct_t));
         p_cmd_pool->device = p_engine->device;
-        p_cmd_pool->cmd_pool = p_engine->frames[i].cmd_pool;
-        if(!deletion_stack_push(p_engine->p_main_del_stack, p_cmd_pool, vulkan_cmd_pool_destroy)) {
-            LOG_ERROR("Failed to push onto deletion stack");
+        p_cmd_pool->cmd_pool = p_engine->p_frames[i].cmd_pool;
+
+        err = deletion_stack_push(p_engine->p_main_del_stack, p_cmd_pool, vulkan_cmd_pool_destroy);
+        if(err.code != 0) {
             vulkan_cmd_pool_destroy(p_cmd_pool);
-            return false;
+            return err;
         }
     }
+
     cmd_pool_del_struct_t* p_cmd_pool = (cmd_pool_del_struct_t*)malloc(sizeof(cmd_pool_del_struct_t));
     p_cmd_pool->device = p_engine->device;
     p_cmd_pool->cmd_pool = p_engine->imm_cmd_pool;
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_cmd_pool, vulkan_cmd_pool_destroy)) {
-        LOG_ERROR("Failed to push onto deletion stack");
+
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_cmd_pool, vulkan_cmd_pool_destroy);
+    if(err.code != 0) {
         vulkan_cmd_pool_destroy(p_cmd_pool);
-        return false;
+        return err;
     }
 
     // Create sync structures
-    if(!vulkan_sync_frame_init(p_engine->device, p_engine->frames)) {
-        LOG_ERROR("Failed to create frame sync structures");
-        return false;
-    }
+    err = vulkan_sync_frame_init(p_engine->device, p_engine->p_frames);
+    if(err.code != 0) return err;
+
     vulkan_sync_frame_del_struct_t* p_frame = malloc(sizeof(vulkan_sync_frame_del_struct_t));
     p_frame->device = p_engine->device;
-    p_frame->p_frames = p_engine->frames;
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_frame, vulkan_sync_frame_destroy)) {
-        LOG_ERROR("Failed to push on deletion stack");
+    p_frame->p_frames = p_engine->p_frames;
+
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_frame, vulkan_sync_frame_destroy);
+    if(err.code != 0) {
         vulkan_sync_frame_destroy(p_frame);
-        return false;
+        return err;
     }
 
     // Create sync structures
-    if(!vulkan_sync_imm_init(p_engine->device, &p_engine->imm_fence)) {
-        LOG_ERROR("Failed to create immidiate sync structures");
-        return false;
-    }
+    err = vulkan_sync_imm_init(p_engine->device, &p_engine->imm_fence);
+    if(err.code != 0) return err;
+
     fence_del_struct_t* p_fence = (fence_del_struct_t*)malloc(sizeof(fence_del_struct_t));
     p_fence->device = p_engine->device;
     p_fence->fence = p_engine->imm_fence;
-    if(!deletion_stack_push(p_engine->p_main_del_stack, p_fence, vulkan_sync_fence_destroy)) {
-        LOG_ERROR("Failed to push on deletion stack");
-        vulkan_sync_fence_destroy(p_fence);
-        return false;
-    }
 
+    err = deletion_stack_push(p_engine->p_main_del_stack, p_fence, vulkan_sync_fence_destroy);
+    if(err.code != 0) {
+        vulkan_sync_fence_destroy(p_fence);
+        return err;
+    }
 
     // Create discriptors
-    if(!create_descriptors(p_engine)) {
-        LOG_ERROR("Failed to create descriptors");
-        return false;
-    }
+    // if(!create_descriptors(p_engine)) {
+    //     LOG_ERROR("Failed to create descriptors");
+    //     return false;
+    // }
 
     // Just playing around with cglm
     // vec3 vectorX = {1.0f, .0f, .0f};
@@ -260,41 +255,36 @@ bool vulkan_engine_init(vulkan_engine_t* p_engine) {
     // printf("After rot:\t    x = %.2f, y = %.2f, z = %.2f\n", dest[0], dest[1], dest[2]);
 
     LOG_INFO("Vulkan engine initialized");
-    return true;
+    return SUCCESS;
 }
 
-bool vulkan_engine_destroy(vulkan_engine_t* p_engine) {
+error_t vulkan_engine_destroy(vulkan_engine_t* p_engine) {
     // Check if p_engine is NULL
     if(p_engine == NULL) {
-        LOG_ERROR("vulkan_engine_destroy: p_engine is NULL");
-        return false;
+        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_engine is NULL", __func__);
     }
 
-    // Make sure the GPU has become idle before flushing deletion queue
-    vkDeviceWaitIdle(p_engine->device);
+    if(p_engine->device != NULL) {
+        // Make sure the GPU has become idle before flushing deletion queue
+        vkDeviceWaitIdle(p_engine->device);
+    }
 
     // Flush deletion queue
-    if(!deletion_stack_flush(&p_engine->p_main_del_stack)) {
-        LOG_ERROR("Failed to flush deletion queue");
-        return false;
-    }
-
-    // Check that p_main_delq is NULL after flushing
-    if(p_engine->p_main_del_stack != NULL) {
-        LOG_ERROR("Failed to flush deletion queue");
-        return false;
+    error_t err = deletion_stack_flush(&p_engine->p_main_del_stack);
+    if(err.code != 0) {
+        return err;
     }
 
     // Vulkan engine successfully destroyed
     LOG_INFO("Vulkan engine destroyed");
-    return true;
+    return SUCCESS;
 }
 
 static void surface_destroy(void* p_void_surface_del_struct) {
-    LOG_DEBUG("Callback: surface_destroy");
+    LOG_DEBUG("Callback: %s", __func__);
 
     if(p_void_surface_del_struct == NULL) {
-        LOG_ERROR("surface_destroy: sufrace_deL-struct is NULL");
+        LOG_ERROR("%s: sufrace_del_struct is NULL", __func__);
         return;
     }
 
@@ -302,12 +292,12 @@ static void surface_destroy(void* p_void_surface_del_struct) {
     surface_del_struct_t* p_surface_del_struct = (surface_del_struct_t*)p_void_surface_del_struct;
 
     if(p_surface_del_struct->instance == NULL) {
-        LOG_ERROR("surface_destroy: instance is NULL");
+        LOG_ERROR("%s: instance is NULL", __func__);
         return;
     }
 
     if(p_surface_del_struct->surface == NULL) {
-        LOG_ERROR("surface_destroy: surface is NULL");
+        LOG_ERROR("%s: surface is NULL", __func__);
         return;
     }
 

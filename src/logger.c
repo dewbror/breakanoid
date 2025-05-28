@@ -29,30 +29,27 @@ void logger_open(const char* file_name) {
 
     // If file_name != NULL, open it as logging file
     fp_log = fopen(file_name, "w");
-    if(fp_log == NULL) {
-        // Handle fopen error
+    if(fp_log == NULL)
         return;
-    }
 
     // Set the name of the log file
     log_file_name = file_name;
+
     LOG_INFO("Log file opened: %s", log_file_name);
 }
 
 void logger_close(void) {
-    if(!logging_to_file) {
+    if(!logging_to_file)
         return;
-    }
+
     LOG_DEBUG("Attempting to close log file: %s", log_file_name);
 
     // Check if log_file is NULL
     if(fp_log != NULL) {
         // Close log_file
         int ret = fclose(fp_log);
-        if(ret < 0) {
-            // Handle fclose error
+        if(ret < 0)
             return;
-        }
 
         // Set free pointer to NULL
         fp_log = NULL;
@@ -60,30 +57,22 @@ void logger_close(void) {
 }
 
 void logger__msg(int level, const char* file, int line, const char* fmt, ...) {
+    // UNUSED
+    (void)file;
+    (void)line;
+
     int ret = 0;
     size_t ret_LU = 0;
     const char* color = NULL;
 
     // Set the color based on the log level of the message
     switch(level) {
-        case LOG_LEVEL_ERROR:
-            color = COLOR_RED;
-            break;
-        case LOG_LEVEL_WARN:
-            color = COLOR_YELLOW;
-            break;
-        case LOG_LEVEL_INFO:
-            color = COLOR_GREEN;
-            break;
-        case LOG_LEVEL_DEBUG:
-            color = COLOR_BLUE;
-            break;
-        case LOG_LEVEL_TRACE:
-            color = COLOR_CYAN;
-            break;
-        default:
-            color = COLOR_RESET;
-            break;
+        case LOG_LEVEL_ERROR: color = COLOR_RED; break;
+        case LOG_LEVEL_WARN: color = COLOR_YELLOW; break;
+        case LOG_LEVEL_INFO: color = COLOR_GREEN; break;
+        case LOG_LEVEL_DEBUG: color = COLOR_BLUE; break;
+        case LOG_LEVEL_TRACE: color = COLOR_CYAN; break;
+        default: color = COLOR_RESET; break;
     }
 
     // Get the current time
@@ -93,10 +82,8 @@ void logger__msg(int level, const char* file, int line, const char* fmt, ...) {
     // Format time string
     char timebuf[TIMEBUF_MAX];
     ret_LU = strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S", tm_now);
-    if(ret_LU == 0) {
-        // Handle strftime error
+    if(ret_LU == 0)
         return;
-    }
 
     if(fp_log == NULL) {
         // If fp_log == NULL print an error directly to stderr.
@@ -109,38 +96,26 @@ void logger__msg(int level, const char* file, int line, const char* fmt, ...) {
     // Initialize variable argument list
     va_start(args, fmt);
 
-    // UNUSED
-    (void)file;
-    (void)line;
-    
     // Print date and time
     if(logging_to_file) {
         ret = fprintf(fp_log, "%s %s", timebuf, levels[level]);
-        if(ret < 0) {
-            // Handle fprintf error
+        if(ret < 0)
             return;
-        }
     } else {
         ret = fprintf(fp_log, "%s %s%s%s", timebuf, color, levels[level], COLOR_RESET);
-        if(ret < 0) {
-            // Handle fprintf error
+        if(ret < 0)
             return;
-        }
     }
-    
+
     // Print formatted string
     ret = vfprintf(fp_log, fmt, args);
-    if(ret < 0) {
-        // Handle vfprintf error
+    if(ret < 0)
         return;
-    }
 
     // Print newline
     ret = fprintf(fp_log, "\n");
-    if(ret < 0) {
-        // Handle fprintf error
+    if(ret < 0)
         return;
-    }
 
     // Cleanup va lists
     va_end(args);
