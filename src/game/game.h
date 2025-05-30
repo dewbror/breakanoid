@@ -20,4 +20,9 @@ error_t game_init(struct vulkan_engine_s* p_engine, game_t* p_game);
  */
 error_t game_destroy(game_t* p_game);
 
+/**
+ * \brief Run game.
+ */
+error_t game_run(struct vulkan_engine_s* p_engine, game_t* p_game);
+
 #endif // GAME_H_

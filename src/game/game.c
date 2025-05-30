@@ -1,5 +1,7 @@
 #include <stdbool.h>
 
+#include <SDL3/SDL.h>
+
 #include "error/error.h"
 
 #include "logger.h"
@@ -32,6 +34,49 @@ error_t game_destroy(game_t* p_game) {
         return err;
 
     LOG_INFO("Game destroyed");
+
+    return SUCCESS;
+}
+
+error_t game_run(struct vulkan_engine_s* p_engine, game_t* p_game) {
+    // UNUSED
+    (void)p_game;
+
+    SDL_Event e;
+    bool quit = false;
+    bool stop_rendering = false;
+
+    while(!quit) {
+        while(SDL_PollEvent(&e) != 0) {
+            switch(e.type) {
+                case SDL_EVENT_QUIT:
+                    quit = true;
+                    break;
+                case SDL_EVENT_WINDOW_MINIMIZED:
+                    LOG_DEBUG("Window minimized");
+                    stop_rendering = true;
+                    break;
+                case SDL_EVENT_WINDOW_RESTORED:
+                    LOG_DEBUG("Windows restored");
+                    stop_rendering = false;
+                    break;
+                default:
+                    break;
+            }
+            // Send SDL event to imgui here
+            // ImGui_ImplSDL3_ProcessEvent(&e);
+        }
+
+        if(stop_rendering) {
+            SDL_Delay(100);
+            continue;
+        }
+
+        // Draw imgui here
+
+        // Perform drawing here
+        vulkan_engine_render_and_present_frame(p_engine);
+    }
 
     return SUCCESS;
 }

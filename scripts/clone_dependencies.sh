@@ -68,7 +68,7 @@ for repo in "${REPOS[@]}"; do
     else
         # If the repo doesnt exist, clone it
         cd "$TARGET_DIR" || exit 1
-        if git -c advice.detachedHead=false clone --depth 1 --branch "${REPO_TAGS[$i]}" "$repo"; then
+        if git -c advice.detachedHead=false clone --recursive --depth 1 --branch "${REPO_TAGS[$i]}" "$repo"; then
             if [ "${REPO_TAGS[$i]}" != "master" ]; then
                 echo "Note: switching to tag ${REPO_TAGS[$i]}"
             fi

@@ -5,7 +5,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 # project name and version
-project(break VERSION 0.1.0 LANGUAGES C)
+project(break VERSION 0.1.0 LANGUAGES C CXX)
 
 # specify C standard
 set(CMAKE_C_STANDARD 99)
@@ -58,6 +58,10 @@ endif()
 # Set cglm and stb directories
 set(cglm_DIR "${CMAKE_SOURCE_DIR}/external/cglm")
 set(stb_DIR  "${CMAKE_SOURCE_DIR}/external/stb")
+
+# Set imgui/cimgui directories
+set(cimgui_DIR "${CMAKE_SOURCE_DIR}/external/cimgui")
+set(imgui_DIR "${CMAKE_SOURCE_DIR}/external/cimgui/imgui")
 
 # Enable shared libraries globally
 set(BUILD_SHARED_LIBS ON)

@@ -1,3 +1,5 @@
-glslc shader.frag -o shader.frag.spv
-glslc shader.vert -o shader.vert.spv
-glslc gradient.comp -o gradient.comp.spv
+#!/bin/bash
+
+glslangValidator --target-env vulkan1.3 -V shader.frag
+glslangValidator --target-env vulkan1.3 -V shader.vert
+glslangValidator --target-env vulkan1.3 -V gradient.comp

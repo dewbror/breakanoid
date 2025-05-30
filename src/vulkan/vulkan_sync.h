@@ -32,4 +32,6 @@ void vulkan_sync_semaphore_destroy(void* p_void_semaphore_del_struct);
 
 void vulkan_sync_fence_destroy(void* p_void_fence_del_struct);
 
+VkSemaphoreSubmitInfo vulkan_sync_get_sem_submit_info(VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore);
+
 #endif // VULKAN_SYNCH_H_

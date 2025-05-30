@@ -121,6 +121,13 @@ static bool is_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice physical_d
         VK_API_VERSION_MINOR(properties2.properties.apiVersion),
         VK_API_VERSION_PATCH(properties2.properties.apiVersion));
 
+    LOG_DEBUG("Device properties:");
+    LOG_DEBUG("    maxComputeWorkGroupInvokations: %u", properties2.properties.limits.maxComputeWorkGroupInvocations);
+    for(int i = 0; i < 3; ++i)
+        LOG_DEBUG("    maxComputeWorkGroupCount[%d]: %u", i, properties2.properties.limits.maxComputeWorkGroupCount[i]);
+    for(int i = 0; i < 3; ++i)
+        LOG_DEBUG("    maxComputeWorkGroupSize[%d]: %u", i, properties2.properties.limits.maxComputeWorkGroupSize[i]);
+
     // Check that the device must support >1.3
     if(properties2.properties.apiVersion < VK_MAKE_VERSION(1, 3, 0)) {
         LOG_WARN("Device supported vulkan version must be greater than 1.3");
@@ -155,6 +162,7 @@ static bool is_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice physical_d
     LOG_DEBUG("    1.0 sampler anisotropy: %s", strbool(features2.features.samplerAnisotropy));
     LOG_DEBUG("    1.3 dynamic rendering: %s", strbool(features13.dynamicRendering));
     LOG_DEBUG("    1.3 synchronization2: %s", strbool(features13.synchronization2));
+    LOG_DEBUG("    1.3 maintainence4: %s", strbool(features13.maintenance4));
 
     // Check that dynamic rendering is supported
     if(features13.dynamicRendering != VK_TRUE) {
@@ -293,14 +301,15 @@ static bool check_device_extension_support(VkPhysicalDevice physical_device) {
 
     VkExtensionProperties* available_extensions =
         (VkExtensionProperties*)malloc(available_extensions_count * sizeof(VkExtensionProperties));
-    vkEnumerateDeviceExtensionProperties(
-        physical_device, VK_NULL_HANDLE, &available_extensions_count, available_extensions);
+
     if(available_extensions == NULL) {
         LOG_ERROR("%s: Failed to allocated memory of size %lu", __func__,
             available_extensions_count * sizeof(VkExtensionProperties));
-
         return false;
     }
+
+    vkEnumerateDeviceExtensionProperties(
+        physical_device, VK_NULL_HANDLE, &available_extensions_count, available_extensions);
 
 #ifndef NDEBUG
     LOG_DEBUG("Available device extensions");
@@ -407,7 +416,7 @@ error_t vulkan_device_init(
 
     // Hard coded, make dynamic in future?
     uint32_t unique_q_fams_count = 0;
-    if(p_queues->graphics == p_queues->present) {
+    if(p_queues->graphics_index == p_queues->present_index) {
         // The graphics and present queue families are the same, this is the most common situation
         unique_q_fams_count = 1;
     } else {
@@ -472,6 +481,7 @@ error_t vulkan_device_init(
     features2.features.samplerAnisotropy = VK_TRUE;
     features13.dynamicRendering = VK_TRUE;
     features13.synchronization2 = VK_TRUE;
+    features13.maintenance4 = VK_TRUE; // Must be enabled when using SPIR-V OpExecutionMode LocalSizeId
 
     // Start filling the main VkDeviceCreateInfo structure.
     VkDeviceCreateInfo create_dev_info = {0};

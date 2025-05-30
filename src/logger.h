@@ -37,7 +37,7 @@ void logger__msg(int level, const char* file, int line, const char* fmt, ...) FO
 #define LOG_LEVEL LOG_LEVEL_INFO
 #else
 // Default LOG_LEVEL in debug mode is LOG_DEBUG
-#define LOG_LEVEL LOG_LEVEL_DEBUG
+#define LOG_LEVEL LOG_LEVEL_TRACE
 #endif
 #endif
 

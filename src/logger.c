@@ -48,7 +48,7 @@ void logger_close(void) {
     if(fp_log != NULL) {
         // Close log_file
         int ret = fclose(fp_log);
-        if(ret < 0)
+        if(ret != 0)
             return;
 
         // Set free pointer to NULL

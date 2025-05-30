@@ -64,11 +64,11 @@ typedef struct allocated_image_s {
  */
 typedef struct frame_data_s {
     VkCommandPool cmd_pool;
-    VkCommandBuffer main_cmd_buffer;
+    VkCommandBuffer cmd;
     VkSemaphore swapchain_semaphore;
     VkSemaphore render_semaphore;
     VkFence render_fence;
-    struct deletion_queue_s* p_delq;
+    struct deletion_stack_s* p_del_stack;
 } frame_data_t;
 
 typedef struct pool_size_ratio_s {

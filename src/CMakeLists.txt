@@ -33,6 +33,28 @@ execute_process(
 # Configure version header
 configure_file(${CMAKE_SOURCE_DIR}/src/version.h.in ${CMAKE_SOURCE_DIR}/src/version.h)
 
+message(STATUS "imgui_DIR = ${imgui_DIR}")
+message(STATUS "cimgui_DIR = ${cimgui_DIR}")
+
+add_library(imgui_lib STATIC
+    ${imgui_DIR}/imgui.cpp
+    ${imgui_DIR}/imgui_demo.cpp
+    ${imgui_DIR}/imgui_draw.cpp
+    ${imgui_DIR}/imgui_tables.cpp
+    ${imgui_DIR}/imgui_widgets.cpp
+    ${imgui_DIR}/backends/imgui_impl_vulkan.cpp
+    ${imgui_DIR}/backends/imgui_impl_sdl3.cpp
+)
+
+target_include_directories(imgui_lib SYSTEM PUBLIC ${imgui_DIR} ${SDL3_INCLUDE_DIR}) 
+
+add_library(cimgui_lib STATIC
+    ${cimgui_DIR}/cimgui.cpp
+)
+
+target_include_directories(cimgui_lib SYSTEM PUBLIC ${cimgui_DIR})
+target_link_libraries(cimgui_lib PUBLIC imgui_lib)
+
 # GLOB all the source files
 file(GLOB_RECURSE SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
 # Remove main.c from the list, we dont want it in the static lib
@@ -46,12 +68,13 @@ target_include_directories(break_lib SYSTEM PUBLIC ${Vulkan_INCLUDE_DIR})
 target_include_directories(break_lib SYSTEM PUBLIC ${SDL3_INCLUDE_DIR})
 target_include_directories(break_lib SYSTEM PUBLIC ${cglm_DIR}/include)
 target_include_directories(break_lib SYSTEM PUBLIC ${stb_DIR})
+target_include_directories(break_lib SYSTEM PUBLIC ${cimgui_DIR})
 
 # Include directory
 target_include_directories(break_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Link libraries
-target_link_libraries(break_lib PUBLIC m SDL3::SDL3-shared ${Vulkan_LIBRARIES})
+target_link_libraries(break_lib PUBLIC cimgui_lib m SDL3::SDL3-shared ${Vulkan_LIBRARIES})
 
 # Compiler-specific flags
 if(CMAKE_C_COMPILER_ID MATCHES "GNU")
@@ -69,7 +92,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU")
         -Wcast-align 
         -Wwrite-strings 
         -Wcast-qual 
-        -Wswitch-enum 
+        # -Wswitch-enum 
         -Wconversion 
         -Wunreachable-code 
         -Wunused-macros 

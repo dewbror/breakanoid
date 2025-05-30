@@ -27,6 +27,13 @@ typedef enum {
     ERR_MALLOC,
     ERR_UNSUPPORTED,
 
+    // Files
+    ERR_FOPEN,
+    ERR_FSEEK,
+    ERR_FTELL,
+    ERR_FREAD,
+    ERR_FCLOSE,
+
     // deletion stack
     ERR_DELETION_STACK_INIT,
     ERR_DELETION_STACK_PUSH,

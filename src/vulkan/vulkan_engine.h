@@ -24,6 +24,7 @@ typedef struct vulkan_engine_s {
     VkSampleCountFlagBits msaa_samples;
     vulkan_swapchain_t vulkan_swapchain;
     allocated_image_t draw_image;
+    VkExtent2D draw_extent;
     long frame_count;
     frame_data_t p_frames[FRAMES_IN_FLIGHT]; // TODO: Rename to p_frames
     VkCommandPool imm_cmd_pool;
@@ -32,6 +33,8 @@ typedef struct vulkan_engine_s {
     descriptor_allocator_t desc_alloc;
     VkDescriptorSet draw_img_desc;
     VkDescriptorSetLayout draw_img_desc_layout;
+    VkPipeline gradient_pipline;
+    VkPipelineLayout gradient_pipline_layout;
 } vulkan_engine_t;
 
 /**
@@ -53,4 +56,7 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine);
  * \return True if successful, false otherwise
  */
 error_t vulkan_engine_destroy(vulkan_engine_t* p_engine);
+
+void vulkan_engine_render_and_present_frame(vulkan_engine_t* p_engine);
+
 #endif // VULKAN_ENGINE_H_

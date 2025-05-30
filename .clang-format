@@ -1,7 +1,7 @@
 ---
 BasedOnStyle:  LLVM
 AlignAfterOpenBracket: DontAlign
-AlignArrayOfStructures: Right
+AlignArrayOfStructures: Left
 AlignConsecutiveAssignments:
   Enabled:          false
   AcrossEmptyLines: false
@@ -44,7 +44,7 @@ AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowBreakBeforeNoexceptSpecifier: Never
 AllowShortBlocksOnASingleLine: Never
-AllowShortCaseLabelsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: false
 AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: false

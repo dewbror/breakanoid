@@ -8,10 +8,13 @@
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_image.h"
 
-error_t vulkan_image_create(
-    VkDevice device, VkPhysicalDevice physical_device, uint32_t width, uint32_t height,
-    allocated_image_t* p_allocated_image
-) {
+/**
+ * \brief blablabla
+ */
+static VkImageSubresourceRange img_subresource_Range(VkImageAspectFlags aspect_mask);
+
+error_t vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint32_t width, uint32_t height,
+    allocated_image_t* p_allocated_image) {
     if(device == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: device is NULL", __func__);
 
@@ -67,8 +70,8 @@ error_t vulkan_image_create(
 
     for(uint32_t i = 0; i < mem_prop.memoryTypeCount; ++i) {
         if((mem_req.memoryTypeBits & (1 << i)) &&
-           (mem_prop.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ==
-               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+            (mem_prop.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ==
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
             mem_type_index = i;
             break;
         }
@@ -158,16 +161,126 @@ void vulkan_image_destroy(void* p_void_allocated_image_del_struct) {
         (allocated_image_del_strut_t*)p_void_allocated_image_del_struct;
 
     vkDestroyImage(
-        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image, VK_NULL_HANDLE
-    );
+        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image, VK_NULL_HANDLE);
     vkFreeMemory(
-        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.mem, VK_NULL_HANDLE
-    );
+        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.mem, VK_NULL_HANDLE);
     vkDestroyImageView(
-        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image_view, VK_NULL_HANDLE
-    );
+        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image_view, VK_NULL_HANDLE);
 
     free(p_allocated_image_del_struct);
     p_allocated_image_del_struct = NULL;
     p_void_allocated_image_del_struct = NULL;
+}
+
+void vulkan_image_transition(VkCommandBuffer cmd, VkImage img, VkImageLayout old_layout, VkImageLayout new_layout) {
+    // VkImageMemoryBarrier2 contains the information for a given image barrier. On here, is where we set the old and
+    // new layouts. In the StageMask, we are doing ALL_COMMANDS. This is inefficient, as it will stall the GPU pipeline
+    // a bit. For our needs, its going to be fine as we are only going to do a few transitions per frame. If you are
+    // doing many transitions per frame as part of a post-process chain, you want to avoid doing this, and instead use
+    // StageMasks more accurate to what you are doing.
+
+    // AllCommands stage mask on the barrier means that the barrier will stop the gpu commands completely when it
+    // arrives at the barrier. By using more finegrained stage masks, its possible to overlap the GPU pipeline across
+    // the barrier a bit. AccessMask is similar, it controls how the barrier stops different parts of the GPU. we are
+    // going to use VK_ACCESS_2_MEMORY_WRITE_BIT for our source, and add VK_ACCESS_2_MEMORY_READ_BIT to our destination.
+    // Those are generic options that will be fine.
+
+    // If you want to read about what would be the optimal way of using pipeline barriers for different use cases, you
+    // can find a great reference in here:
+    //  - https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples
+    // This layout transition is going to work just fine for the whole tutorial, but if you want, you can add more
+    // complicated transition functions that are more accurate/lightweight.
+    VkImageMemoryBarrier2 img_barrier2 = {0};
+    img_barrier2.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    img_barrier2.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+    switch(old_layout) { // NOLINT
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            img_barrier2.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+            break;
+        default:
+            img_barrier2.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+            break;
+    }
+
+    img_barrier2.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+
+    switch(new_layout) { // NOLINT
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            img_barrier2.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            img_barrier2.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+            img_barrier2.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT; 
+            img_barrier2.dstAccessMask = 0;
+            break;
+        default:
+            img_barrier2.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+            break;
+    }
+
+    img_barrier2.oldLayout = old_layout;
+    img_barrier2.newLayout = new_layout;
+
+    VkImageAspectFlags aspect_mask = (new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
+                                         ? VK_IMAGE_ASPECT_DEPTH_BIT
+                                         : VK_IMAGE_ASPECT_COLOR_BIT;
+    img_barrier2.subresourceRange = img_subresource_Range(aspect_mask);
+    img_barrier2.image = img;
+
+    VkDependencyInfo dep_info = {0};
+    dep_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dep_info.imageMemoryBarrierCount = 1;
+    dep_info.pImageMemoryBarriers = &img_barrier2;
+
+    vkCmdPipelineBarrier2(cmd, &dep_info);
+}
+
+static VkImageSubresourceRange img_subresource_Range(VkImageAspectFlags aspect_mask) {
+    VkImageSubresourceRange sub_image = {0};
+    sub_image.aspectMask = aspect_mask;
+    sub_image.baseMipLevel = 0;
+    sub_image.levelCount = VK_REMAINING_MIP_LEVELS;
+    sub_image.baseArrayLayer = 0;
+    sub_image.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    return sub_image;
+}
+
+void vulkan_image_copy_image_to_image(
+    VkCommandBuffer cmd, VkImage src_img, VkImage dst_img, VkExtent2D src_ext, VkExtent2D dst_ext) {
+    VkImageBlit2 blit_region = {0};
+    blit_region.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
+
+    blit_region.srcOffsets[1].x = (int32_t)src_ext.width;
+    blit_region.srcOffsets[1].y = (int32_t)src_ext.height;
+    blit_region.srcOffsets[1].z = 1;
+
+    blit_region.dstOffsets[1].x = (int32_t)dst_ext.width;
+    blit_region.dstOffsets[1].y = (int32_t)dst_ext.height;
+    blit_region.dstOffsets[1].z = 1;
+
+    blit_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit_region.srcSubresource.baseArrayLayer = 0;
+    blit_region.srcSubresource.layerCount = 1;
+    blit_region.srcSubresource.mipLevel = 0;
+
+    blit_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit_region.dstSubresource.baseArrayLayer = 0;
+    blit_region.dstSubresource.layerCount = 1;
+    blit_region.dstSubresource.mipLevel = 0;
+
+    VkBlitImageInfo2 blit_info = {0};
+    blit_info.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
+    blit_info.dstImage = dst_img;
+    blit_info.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    blit_info.srcImage = src_img;
+    blit_info.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    blit_info.filter = VK_FILTER_LINEAR;
+    blit_info.regionCount = 1;
+    blit_info.pRegions = &blit_region;
+
+    vkCmdBlitImage2(cmd, &blit_info);
 }

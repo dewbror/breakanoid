@@ -46,6 +46,7 @@ int main(int argc, char** argv) {
         // vulkan engine initiated successfully, start game
         game_t game;
         game_init(&engine, &game);
+        game_run(&engine, &game);
         game_destroy(&game);
     }
 

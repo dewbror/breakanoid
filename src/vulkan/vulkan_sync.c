@@ -122,3 +122,14 @@ void vulkan_sync_fence_destroy(void* p_void_fence_del_struct) {
     p_fence_del_struct = NULL;
     p_void_fence_del_struct = NULL;
 }
+
+VkSemaphoreSubmitInfo vulkan_sync_get_sem_submit_info(VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore) {
+    VkSemaphoreSubmitInfo info = {0};
+    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    info.semaphore = semaphore;
+    info.stageMask = stage_mask;
+    info.deviceIndex = 0;
+    info.value = 1;
+
+    return info;
+}
