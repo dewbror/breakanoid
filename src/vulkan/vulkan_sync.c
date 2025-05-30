@@ -9,7 +9,8 @@
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_sync.h"
 
-error_t vulkan_sync_frame_init(VkDevice device, frame_data_t* p_frames) {
+error_t vulkan_sync_frame_init(VkDevice device, frame_data_t* p_frames)
+{
     if(device == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: device is NULL", __func__);
 
@@ -47,7 +48,8 @@ error_t vulkan_sync_frame_init(VkDevice device, frame_data_t* p_frames) {
     return SUCCESS;
 }
 
-void vulkan_sync_frame_destroy(void* p_void_vulkan_sync_frame_del_struct) {
+void vulkan_sync_frame_destroy(void* p_void_vulkan_sync_frame_del_struct)
+{
     LOG_DEBUG("Callback: %s", __func__);
 
     if(p_void_vulkan_sync_frame_del_struct == NULL) {
@@ -73,7 +75,8 @@ void vulkan_sync_frame_destroy(void* p_void_vulkan_sync_frame_del_struct) {
     p_void_vulkan_sync_frame_del_struct = NULL;
 }
 
-error_t vulkan_sync_imm_init(VkDevice device, VkFence* p_imm_fence) {
+error_t vulkan_sync_imm_init(VkDevice device, VkFence* p_imm_fence)
+{
     VkFenceCreateInfo fence_info = {0};
     fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -86,7 +89,8 @@ error_t vulkan_sync_imm_init(VkDevice device, VkFence* p_imm_fence) {
     return SUCCESS;
 }
 
-void vulkan_sync_semaphore_destroy(void* p_void_semaphore_del_struct) {
+void vulkan_sync_semaphore_destroy(void* p_void_semaphore_del_struct)
+{
     LOG_DEBUG("Callback: %s", __func__);
 
     if(p_void_semaphore_del_struct == NULL) {
@@ -105,7 +109,8 @@ void vulkan_sync_semaphore_destroy(void* p_void_semaphore_del_struct) {
     p_void_semaphore_del_struct = NULL;
 }
 
-void vulkan_sync_fence_destroy(void* p_void_fence_del_struct) {
+void vulkan_sync_fence_destroy(void* p_void_fence_del_struct)
+{
     LOG_DEBUG("Callback: %s", __func__);
 
     if(p_void_fence_del_struct == NULL) {
@@ -123,7 +128,8 @@ void vulkan_sync_fence_destroy(void* p_void_fence_del_struct) {
     p_void_fence_del_struct = NULL;
 }
 
-VkSemaphoreSubmitInfo vulkan_sync_get_sem_submit_info(VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore) {
+VkSemaphoreSubmitInfo vulkan_sync_get_sem_submit_info(VkPipelineStageFlags2 stage_mask, VkSemaphore semaphore)
+{
     VkSemaphoreSubmitInfo info = {0};
     info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     info.semaphore = semaphore;

@@ -19,7 +19,8 @@
 #include "vulkan/vulkan_engine.h"
 #include "game/game.h"
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     // UNUSED
     (void)argc;
     (void)argv;
@@ -42,7 +43,8 @@ int main(int argc, char** argv) {
     if(err.code != 0) {
         LOG_ERROR("Failed to initiate vulkan engine: %s", err.msg);
         error_destroy(&err);
-    } else {
+    }
+    else {
         // vulkan engine initiated successfully, start game
         game_t game;
         game_init(&engine, &game);
@@ -65,7 +67,8 @@ int main(int argc, char** argv) {
     if(success != 0) {
         LOG_ERROR("Exiting with failure");
         return EXIT_FAILURE;
-    } else {
+    }
+    else {
         LOG_INFO("Exiting with success");
         return EXIT_SUCCESS;
     }

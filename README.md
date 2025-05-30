@@ -16,7 +16,7 @@ Dependencies
   - [SDL3](https://github.com/libsdl-org/SDL) 3.2.14
   - [cglm](https://github.com/recp/cglm) 0.9.6
   - [stb_image](https://github.com/nothings/stb) 2.30
-  - [cimgui](https://github.com/cimgui/cimgui) 1.53.1 (for development)
+  - [cimgui](https://github.com/cimgui/cimgui) 1.91.9 (for development)
   - [cmocka](https://github.com/clibs/cmocka) 1.1.5 (for tests)
 
 How to Build (with cmake)

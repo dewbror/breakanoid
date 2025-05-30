@@ -60,7 +60,8 @@ static void surface_destroy(void* p_void_surface_del_struct);
 static void draw_background(VkCommandBuffer cmd, VkPipeline pipeline, VkPipelineLayout pipeline_layout,
     VkDescriptorSet desc_set, VkExtent2D draw_extent);
 
-error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
+error_t vulkan_engine_init(vulkan_engine_t* p_engine)
+{
     // Check if p_engine is NULL
     if(p_engine == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_engine is NULL", __func__);
@@ -79,8 +80,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     error_t err;
 
     // Initialize SDL
-    err =
-        sdl_backend_init(&p_engine->p_window, (int)p_engine->window_extent.width, (int)p_engine->window_extent.height);
+    err = sdl_backend_init(&p_engine->p_window, (int)p_engine->window_extent.width,
+        (int)p_engine->window_extent.height);
     if(err.code != 0)
         return err;
 
@@ -108,8 +109,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     if(err.code != 0)
         return err;
 
-    vulkan_instance_debug_msg_del_struct_t* p_debug_msg_del_struct =
-        (vulkan_instance_debug_msg_del_struct_t*)malloc(sizeof(vulkan_instance_debug_msg_del_struct_t));
+    vulkan_instance_debug_msg_del_struct_t* p_debug_msg_del_struct = (vulkan_instance_debug_msg_del_struct_t*)malloc(
+        sizeof(vulkan_instance_debug_msg_del_struct_t));
     p_debug_msg_del_struct->instance = p_engine->instance;
     p_debug_msg_del_struct->debug_msg = p_engine->debug_msg;
 
@@ -154,8 +155,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     if(err.code != 0)
         return err;
 
-    vulkan_swapchain_del_struct_t* p_swapchain_del_struct =
-        (vulkan_swapchain_del_struct_t*)malloc(sizeof(vulkan_swapchain_del_struct_t));
+    vulkan_swapchain_del_struct_t* p_swapchain_del_struct = (vulkan_swapchain_del_struct_t*)malloc(
+        sizeof(vulkan_swapchain_del_struct_t));
     p_swapchain_del_struct->device = p_engine->device;
     p_swapchain_del_struct->vulkan_swapchain = p_engine->vulkan_swapchain;
 
@@ -172,8 +173,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
         return err;
     }
 
-    allocated_image_del_strut_t* p_allocated_image_del_struct =
-        (allocated_image_del_strut_t*)malloc(sizeof(allocated_image_del_strut_t));
+    allocated_image_del_strut_t* p_allocated_image_del_struct = (allocated_image_del_strut_t*)malloc(
+        sizeof(allocated_image_del_strut_t));
     p_allocated_image_del_struct->device = p_engine->device;
     p_allocated_image_del_struct->allocated_image = p_engine->draw_image;
 
@@ -291,7 +292,8 @@ error_t vulkan_engine_init(vulkan_engine_t* p_engine) {
     return SUCCESS;
 }
 
-error_t vulkan_engine_destroy(vulkan_engine_t* p_engine) {
+error_t vulkan_engine_destroy(vulkan_engine_t* p_engine)
+{
     // Check if p_engine is NULL
     if(p_engine == NULL) {
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_engine is NULL", __func__);
@@ -313,7 +315,8 @@ error_t vulkan_engine_destroy(vulkan_engine_t* p_engine) {
     return SUCCESS;
 }
 
-static void surface_destroy(void* p_void_surface_del_struct) {
+static void surface_destroy(void* p_void_surface_del_struct)
+{
     LOG_DEBUG("Callback: %s", __func__);
 
     if(p_void_surface_del_struct == NULL) {
@@ -342,31 +345,38 @@ static void surface_destroy(void* p_void_surface_del_struct) {
     p_void_surface_del_struct = NULL;
 }
 
-void vulkan_engine_render_and_present_frame(vulkan_engine_t* p_engine) {
+void vulkan_engine_render_and_present_frame(vulkan_engine_t* p_engine)
+{
     // The the current frame
     frame_data_t frame = p_engine->p_frames[p_engine->frame_count % FRAMES_IN_FLIGHT];
 
+    VkResult vk_result = VK_SUCCESS;
+
     // Wait until device has finished rendering the last frame. TIMEOUT of UINT64_MAX nanoseconds
-    if(vkWaitForFences(p_engine->device, 1, &frame.render_fence, VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+    vk_result = vkWaitForFences(p_engine->device, 1, &frame.render_fence, VK_TRUE, UINT64_MAX);
+    if(vk_result != VK_SUCCESS)
         return;
 
     // Flush the current frames deletion stack
     // deletion_stack_flush(&frame.p_del_stack);
 
     // Reset render fence
-    if(vkResetFences(p_engine->device, 1, &frame.render_fence) != VK_SUCCESS)
+    vk_result = vkResetFences(p_engine->device, 1, &frame.render_fence);
+    if(vk_result != VK_SUCCESS)
         return;
 
     // Request image from the swapchain
     uint32_t index = 0;
-    if(vkAcquireNextImageKHR(p_engine->device, p_engine->vulkan_swapchain.swapchain, UINT64_MAX,
-           frame.swapchain_semaphore, VK_NULL_HANDLE, &index) != VK_SUCCESS)
+    vk_result = vkAcquireNextImageKHR(p_engine->device, p_engine->vulkan_swapchain.swapchain, UINT64_MAX,
+        frame.swapchain_semaphore, VK_NULL_HANDLE, &index);
+    if(vk_result != VK_SUCCESS)
         return;
 
     // Recreate swapchain if Failed
 
     // Reset cmd buffer
-    if(vkResetCommandBuffer(frame.cmd, 0) != VK_SUCCESS)
+    vk_result = vkResetCommandBuffer(frame.cmd, 0);
+    if(vk_result != VK_SUCCESS)
         return;
 
     // LOG_TRACE("draw_image.extent.width: %u", p_engine->draw_image.extent.width);
@@ -380,7 +390,8 @@ void vulkan_engine_render_and_present_frame(vulkan_engine_t* p_engine) {
     cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    if(vkBeginCommandBuffer(frame.cmd, &cmd_begin_info) != VK_SUCCESS)
+    vk_result = vkBeginCommandBuffer(frame.cmd, &cmd_begin_info);
+    if(vk_result != VK_SUCCESS)
         return;
 
     // Transition our main draw image into general layout so we can write into it, we will overwrite it all so we dont
@@ -391,8 +402,8 @@ void vulkan_engine_render_and_present_frame(vulkan_engine_t* p_engine) {
         p_engine->draw_extent);
 
     // Transition the draw image and the swapchain image to the correct transfer layouts
-    vulkan_image_transition(
-        frame.cmd, p_engine->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    vulkan_image_transition(frame.cmd, p_engine->draw_image.image, VK_IMAGE_LAYOUT_GENERAL,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     vulkan_image_transition(frame.cmd, p_engine->vulkan_swapchain.p_images[index], VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -404,13 +415,14 @@ void vulkan_engine_render_and_present_frame(vulkan_engine_t* p_engine) {
     // vulkan_image_transition(cmd, p_engine->vulkan_swapchain.p_images[index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
     //     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-    // draw_imgui
+    // draw_imgui here
 
     vulkan_image_transition(frame.cmd, p_engine->vulkan_swapchain.p_images[index], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     // End command buffer
-    if(vkEndCommandBuffer(frame.cmd) != VK_SUCCESS)
+    vk_result = vkEndCommandBuffer(frame.cmd);
+    if(vk_result != VK_SUCCESS)
         return;
 
     // Prepare the submission to the queue. We wat to wait on the _presentSemaphore, as that semaphore is signaled when
@@ -420,14 +432,15 @@ void vulkan_engine_render_and_present_frame(vulkan_engine_t* p_engine) {
     VkSemaphoreSubmitInfo wait_info =
         vulkan_sync_get_sem_submit_info(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, frame.swapchain_semaphore);
 
-    VkSemaphoreSubmitInfo signal_info =
-        vulkan_sync_get_sem_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, frame.render_semaphore);
+    VkSemaphoreSubmitInfo signal_info = vulkan_sync_get_sem_submit_info(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT,
+        frame.render_semaphore);
 
     VkSubmitInfo2 submit_info2 = vulkan_cmd_get_submit_info2(&cmd_info, &signal_info, &wait_info);
 
     // Submit command buffer to the queue and execute it.
     // _renderFence will now block until the graphics commands finish execution.
-    if(vkQueueSubmit2(p_engine->queues.graphics, 1, &submit_info2, frame.render_fence) != VK_SUCCESS)
+    vk_result = vkQueueSubmit2(p_engine->queues.graphics, 1, &submit_info2, frame.render_fence);
+    if(vk_result != VK_SUCCESS)
         return;
 
     // Prepare present
@@ -443,7 +456,8 @@ void vulkan_engine_render_and_present_frame(vulkan_engine_t* p_engine) {
     present_info.pImageIndices = &index;
 
     // Present rendered image
-    if(vkQueuePresentKHR(p_engine->queues.present, &present_info) != VK_SUCCESS)
+    vk_result = vkQueuePresentKHR(p_engine->queues.present, &present_info);
+    if(vk_result != VK_SUCCESS)
         return;
 
     // Increase the number of frames drawn
@@ -451,7 +465,8 @@ void vulkan_engine_render_and_present_frame(vulkan_engine_t* p_engine) {
 }
 
 static void draw_background(VkCommandBuffer cmd, VkPipeline pipeline, VkPipelineLayout pipeline_layout,
-    VkDescriptorSet desc_set, VkExtent2D draw_extent) {
+    VkDescriptorSet desc_set, VkExtent2D draw_extent)
+{
     // Bind the gradient drawing compute pipeline
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 

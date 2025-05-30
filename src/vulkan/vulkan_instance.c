@@ -81,10 +81,11 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
 /**
  * Proxy function for vkDestroyDebugUtilsMessengerEXT.
  */
-static void DestroyDebugUtilsMessengerEXT(
-    VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger, const VkAllocationCallbacks* p_allocator);
+static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger,
+    const VkAllocationCallbacks* p_allocator);
 
-error_t vulkan_instance_init(VkInstance* p_instance) {
+error_t vulkan_instance_init(VkInstance* p_instance)
+{
     if(p_instance == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_instance is NULL", __func__);
 
@@ -145,13 +146,13 @@ error_t vulkan_instance_init(VkInstance* p_instance) {
 
     if(enable_validation_layers) {
         const VkLayerSettingEXT settings[] = {
-            {"VK_LAYER_KHRONOS_validation",           "validate_sync", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
+            {"VK_LAYER_KHRONOS_validation", "validate_sync",           VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
              &setting_validate_sync          },
             {"VK_LAYER_KHRONOS_validation", "validate_best_practices", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
              &setting_validate_best_practices},
-            {"VK_LAYER_KHRONOS_validation",    "enable_message_limit", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
+            {"VK_LAYER_KHRONOS_validation", "enable_message_limit",    VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1,
              &setting_enable_message_limit   },
-            {"VK_LAYER_KHRONOS_validation", "duplicate_message_limit",  VK_LAYER_SETTING_TYPE_INT32_EXT, 1,
+            {"VK_LAYER_KHRONOS_validation", "duplicate_message_limit", VK_LAYER_SETTING_TYPE_INT32_EXT,  1,
              &setting_duplicate_message_limit}
         };
 
@@ -189,7 +190,8 @@ error_t vulkan_instance_init(VkInstance* p_instance) {
     return SUCCESS;
 }
 
-void vulkan_instance_destroy(void* p_void_instance) {
+void vulkan_instance_destroy(void* p_void_instance)
+{
     LOG_DEBUG("Callback: %s", __func__);
 
     // NULL check
@@ -205,7 +207,8 @@ void vulkan_instance_destroy(void* p_void_instance) {
     vkDestroyInstance(instance, VK_NULL_HANDLE);
 }
 
-static const char** get_required_layers(uint32_t* p_required_instance_layers_count) {
+static const char** get_required_layers(uint32_t* p_required_instance_layers_count)
+{
     // Since the only instance layers we are currently requiring are the validation layers (if they are enabled) the
     // first thing we do is check if validaiton layers are enabled, if not then we return NULL. The design of this
     // function is supposed to mimic that of get_required_extensions.
@@ -221,11 +224,11 @@ static const char** get_required_layers(uint32_t* p_required_instance_layers_cou
     }
 
     // Allocate array of VkLayerProperties with size available_layers_count
-    VkLayerProperties* available_layers =
-        (VkLayerProperties*)malloc(available_layers_count * sizeof(VkLayerProperties));
+    VkLayerProperties* available_layers = (VkLayerProperties*)malloc(
+        available_layers_count * sizeof(VkLayerProperties));
     if(available_layers == NULL) {
-        LOG_ERROR(
-            "%s: Failed to allocate memory of size %lu", __func__, available_layers_count * sizeof(VkLayerProperties));
+        LOG_ERROR("%s: Failed to allocate memory of size %lu", __func__,
+            available_layers_count * sizeof(VkLayerProperties));
         return NULL;
     }
 
@@ -243,7 +246,8 @@ static const char** get_required_layers(uint32_t* p_required_instance_layers_cou
     uint32_t allocated_layers_count = instance_layers_count;
     if(enable_validation_layers) {
         ++allocated_layers_count;
-    } else {
+    }
+    else {
         return NULL;
     }
 
@@ -294,7 +298,8 @@ static const char** get_required_layers(uint32_t* p_required_instance_layers_cou
     return layers;
 }
 
-static const char** get_required_extensions(uint32_t* p_required_extensions_count) {
+static const char** get_required_extensions(uint32_t* p_required_extensions_count)
+{
     *p_required_extensions_count = 0;
 
     // Query number of available instance extensions
@@ -302,8 +307,8 @@ static const char** get_required_extensions(uint32_t* p_required_extensions_coun
     vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &available_extensions_count, VK_NULL_HANDLE);
 
     // Allocate array of VkExtensionProperties with size available_extension_count
-    VkExtensionProperties* available_extensions =
-        (VkExtensionProperties*)malloc(available_extensions_count * sizeof(VkExtensionProperties));
+    VkExtensionProperties* available_extensions = (VkExtensionProperties*)malloc(
+        available_extensions_count * sizeof(VkExtensionProperties));
     if(available_extensions == NULL) {
         LOG_ERROR("%s: Failed to allocate memory of size %lu", __func__,
             available_extensions_count * sizeof(VkExtensionProperties));
@@ -391,29 +396,24 @@ static const char** get_required_extensions(uint32_t* p_required_extensions_coun
     return extensions;
 }
 
-static void get_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* p_create_info) {
+static void get_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfoEXT* p_create_info)
+{
     p_create_info->sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    p_create_info->messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    p_create_info->messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     p_create_info->messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                                 VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                                 VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     p_create_info->pfnUserCallback = debug_callback;
     p_create_info->pUserData = VK_NULL_HANDLE;
     p_create_info->pNext = VK_NULL_HANDLE;
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, // NOLINT(bugprone-easily-swappable-parameters)
+VKAPI_ATTR VkBool32 VKAPI_CALL
+debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, // NOLINT(bugprone-easily-swappable-parameters)
     VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
-    void* p_user_data) {
-
-    // UNUSED
-    (void)message_severity;
-    (void)message_type;
-    (void)p_user_data;
-
+    void* p_user_data)
+{
     // The first parameter specifies the severity of the message, which is one of the following flags:
     // VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: Diagnostic message.
     // VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: Informational message like the creation of a resource.
@@ -440,31 +440,53 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
     // Finally, the pUserData parameter contains a pointer that was specified during the setup of the callback and
     // allows you to pass your own data to it.
 
+    // UNUSED
+    (void)message_severity;
+    (void)message_type;
+    (void)p_user_data;
+
     int level = LOG_LEVEL_TRACE;
-    if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    // if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    //     level = LOG_LEVEL_ERROR;
+    // } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+    //     level = LOG_LEVEL_WARN;
+    //     // } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+    //     //     level = LOG_LEVEL_INFO;
+    // } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+    //     level = LOG_LEVEL_DEBUG;
+    // } else {
+    //     return VK_FALSE;
+    // }
+
+    switch(message_severity) {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
         level = LOG_LEVEL_ERROR;
-    } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
         level = LOG_LEVEL_WARN;
-        // } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-        //     level = LOG_LEVEL_INFO;
-    } else if(message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+        break;
+    // case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+    //     level = LOG_LEVEL_TRACE;
+    //     break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
         level = LOG_LEVEL_DEBUG;
-    } else {
-        return VK_FALSE;
+        break;
+    default:
+        level = LOG_LEVEL_TRACE;
+        break;
     }
 
     logger__msg(level, NULL, 0, "validation layer: %s", p_callback_data->pMessage);
     return VK_FALSE;
 }
 
-error_t vulkan_instance_debug_msg_init(VkInstance instance, VkDebugUtilsMessengerEXT* p_debug_msg) {
-    if(instance == NULL) {
+error_t vulkan_instance_debug_msg_init(VkInstance instance, VkDebugUtilsMessengerEXT* p_debug_msg)
+{
+    if(instance == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: instance is NULL", __func__);
-    }
 
-    if(p_debug_msg == NULL) {
+    if(p_debug_msg == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_debug is NULL", __func__);
-    }
 
     // No debug messenger if validation layers are not enabled
     if(!enable_validation_layers) {
@@ -494,7 +516,8 @@ error_t vulkan_instance_debug_msg_init(VkInstance instance, VkDebugUtilsMessenge
     return SUCCESS;
 }
 
-void vulkan_instance_debug_msg_destroy(void* p_void_debug_msg_del_struct) {
+void vulkan_instance_debug_msg_destroy(void* p_void_debug_msg_del_struct)
+{
     LOG_DEBUG("Callback: vulkan_instance_debug_messenger_destroy");
 
     // The VkDebugUtilsMessengerEXT object also needs to be cleaned up with a call to
@@ -529,26 +552,28 @@ void vulkan_instance_debug_msg_destroy(void* p_void_debug_msg_del_struct) {
 
 static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
     const VkDebugUtilsMessengerCreateInfoEXT* p_create_info, const VkAllocationCallbacks* p_allocator,
-    VkDebugUtilsMessengerEXT* p_debug_messenger) {
+    VkDebugUtilsMessengerEXT* p_debug_messenger)
+{
     // Look up address of vkCreateDebugUtilsMessengerEXT
-    PFN_vkCreateDebugUtilsMessengerEXT func =
-        (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+    PFN_vkCreateDebugUtilsMessengerEXT func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance,
+        "vkCreateDebugUtilsMessengerEXT");
     // return it if not NULL, else return error extension not present.
     if(func != VK_NULL_HANDLE) {
         return func(instance, p_create_info, p_allocator, p_debug_messenger);
-    } else {
+    }
+    else {
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 }
 
-static void DestroyDebugUtilsMessengerEXT(
-    VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger, const VkAllocationCallbacks* p_allocator) {
-
+static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger,
+    const VkAllocationCallbacks* p_allocator)
+{
     // Look up address of vkDestroyDebugUtilsMessengerEXT
-    PFN_vkDestroyDebugUtilsMessengerEXT func =
-        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    PFN_vkDestroyDebugUtilsMessengerEXT func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance,
+        "vkDestroyDebugUtilsMessengerEXT");
+
     // return it if not NULL
-    if(func != VK_NULL_HANDLE) {
+    if(func != VK_NULL_HANDLE)
         func(instance, debug_messenger, p_allocator);
-    }
 }

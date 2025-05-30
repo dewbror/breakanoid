@@ -45,7 +45,8 @@ static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR* p_presen
 static VkExtent2D choose_swapchain_extent(SDL_Window* p_window, VkSurfaceCapabilitiesKHR capabilities);
 
 error_t vulkan_swapchain_init(VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface,
-    SDL_Window* p_window, vulkan_swapchain_t* p_vulkan_swapchain) {
+    SDL_Window* p_window, vulkan_swapchain_t* p_vulkan_swapchain)
+{
 
     if(device == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: device is NULL", __func__);
@@ -69,12 +70,12 @@ error_t vulkan_swapchain_init(VkDevice device, VkPhysicalDevice physical_device,
         return error_init(ERR_SRC_CORE, ERR_TEMP, "Swapchain not supported by device");
 
     // Choose which surface formats we want to use
-    VkSurfaceFormatKHR surface_format =
-        choose_swapchain_surface_format(swapchain_support.formats, swapchain_support.formats_count);
+    VkSurfaceFormatKHR surface_format = choose_swapchain_surface_format(swapchain_support.formats,
+        swapchain_support.formats_count);
 
     // Choose which present modes we want to use
-    VkPresentModeKHR present_mode =
-        choose_swapchain_present_mode(swapchain_support.present_modes, swapchain_support.present_modes_count);
+    VkPresentModeKHR present_mode = choose_swapchain_present_mode(swapchain_support.present_modes,
+        swapchain_support.present_modes_count);
 
     // Choose our swapchain extent
     VkExtent2D extent = choose_swapchain_extent(p_window, swapchain_support.capabilities);
@@ -132,7 +133,8 @@ error_t vulkan_swapchain_init(VkDevice device, VkPhysicalDevice physical_device,
         create_swapchain_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         create_swapchain_info.queueFamilyIndexCount = 2;
         create_swapchain_info.pQueueFamilyIndices = q_fam_indices_array;
-    } else {
+    }
+    else {
         create_swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         create_swapchain_info.queueFamilyIndexCount = 0;            // Optional
         create_swapchain_info.pQueueFamilyIndices = VK_NULL_HANDLE; // Optional
@@ -244,7 +246,8 @@ error_t vulkan_swapchain_init(VkDevice device, VkPhysicalDevice physical_device,
     return SUCCESS;
 }
 
-void vulkan_swapchain_destroy(void* p_void_vulkan_swapchain_del_struct) {
+void vulkan_swapchain_destroy(void* p_void_vulkan_swapchain_del_struct)
+{
     LOG_DEBUG("Callback: %s", __func__);
 
     if(p_void_vulkan_swapchain_del_struct == NULL) {
@@ -289,7 +292,8 @@ void vulkan_swapchain_destroy(void* p_void_vulkan_swapchain_del_struct) {
     p_void_vulkan_swapchain_del_struct = NULL;
 }
 
-static VkSurfaceFormatKHR choose_swapchain_surface_format(VkSurfaceFormatKHR* p_formats, size_t formats_count) {
+static VkSurfaceFormatKHR choose_swapchain_surface_format(VkSurfaceFormatKHR* p_formats, size_t formats_count)
+{
     // For the color space we’ll use sRGB, which is pretty much the standard color space for viewing and printing
     // purposes, like the textures we’ll use later on. Because of that we should also use an sRGB color format, of
     // which one of the most common ones is VK_FORMAT_B8G8R8A8_SRGB.
@@ -309,7 +313,8 @@ static VkSurfaceFormatKHR choose_swapchain_surface_format(VkSurfaceFormatKHR* p_
     return p_formats[0];
 }
 
-static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR* p_present_modes, size_t present_modes_count) {
+static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR* p_present_modes, size_t present_modes_count)
+{
     // Only the VK_PRESENT_MODE_FIFO_KHR mode is guaranteed to be available, so we’ll again have to write a
     // function that looks for the best mode that is available.
     // I personally think that VK_PRESENT_MODE_MAILBOX_KHR is a very nice trade-off if energy usage is not a
@@ -324,7 +329,8 @@ static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR* p_presen
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-static VkExtent2D choose_swapchain_extent(SDL_Window* p_window, VkSurfaceCapabilitiesKHR capabilities) {
+static VkExtent2D choose_swapchain_extent(SDL_Window* p_window, VkSurfaceCapabilitiesKHR capabilities)
+{
     // The swap extent is the resolution of the swap chain images and it’s almost always exactly equal to the
     // resolution of the window that we’re drawing to in pixels (more on that in a moment). The range of the
     // possible resolutions is defined in the VkSurfaceCapabilitiesKHR structure. Vulkan tells us to match the
@@ -344,7 +350,8 @@ static VkExtent2D choose_swapchain_extent(SDL_Window* p_window, VkSurfaceCapabil
     // in pixel before matching it against the minimum and maximum image extent.
     if(capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;
-    } else {
+    }
+    else {
         int width = 0, height = 0;
         // SDL_GetWindowSize(p_engine->p_SDL_window, &width, &height);
         if(!SDL_GetWindowSizeInPixels(p_window, &width, &height)) {
@@ -359,13 +366,15 @@ static VkExtent2D choose_swapchain_extent(SDL_Window* p_window, VkSurfaceCapabil
         // the implementation
         if(actual_extent.width < capabilities.minImageExtent.width) {
             actual_extent.width = capabilities.minImageExtent.width;
-        } else if(actual_extent.width > capabilities.maxImageExtent.width) {
+        }
+        else if(actual_extent.width > capabilities.maxImageExtent.width) {
             actual_extent.width = capabilities.maxImageExtent.width;
         }
 
         if(actual_extent.height < capabilities.minImageExtent.height) {
             actual_extent.height = capabilities.minImageExtent.height;
-        } else if(actual_extent.height > capabilities.maxImageExtent.height) {
+        }
+        else if(actual_extent.height > capabilities.maxImageExtent.height) {
             actual_extent.height = capabilities.maxImageExtent.height;
         }
 

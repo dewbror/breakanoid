@@ -3,13 +3,14 @@
 #include <SDL3/SDL.h>
 
 #include "error/error.h"
-
 #include "logger.h"
+
 #include "vulkan/vulkan_engine.h"
 #include "game/game.h"
 #include "util/deletion_stack.h"
 
-error_t game_init(struct vulkan_engine_s* p_engine, game_t* p_game) {
+error_t game_init(struct vulkan_engine_s* p_engine, game_t* p_game)
+{
     // UNUSED
     (void)p_engine;
     (void)p_game;
@@ -24,7 +25,8 @@ error_t game_init(struct vulkan_engine_s* p_engine, game_t* p_game) {
     return SUCCESS;
 }
 
-error_t game_destroy(game_t* p_game) {
+error_t game_destroy(game_t* p_game)
+{
     if(p_game == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_game is NULL", __func__);
 
@@ -38,7 +40,8 @@ error_t game_destroy(game_t* p_game) {
     return SUCCESS;
 }
 
-error_t game_run(struct vulkan_engine_s* p_engine, game_t* p_game) {
+error_t game_run(struct vulkan_engine_s* p_engine, game_t* p_game)
+{
     // UNUSED
     (void)p_game;
 
@@ -49,19 +52,19 @@ error_t game_run(struct vulkan_engine_s* p_engine, game_t* p_game) {
     while(!quit) {
         while(SDL_PollEvent(&e) != 0) {
             switch(e.type) {
-                case SDL_EVENT_QUIT:
-                    quit = true;
-                    break;
-                case SDL_EVENT_WINDOW_MINIMIZED:
-                    LOG_DEBUG("Window minimized");
-                    stop_rendering = true;
-                    break;
-                case SDL_EVENT_WINDOW_RESTORED:
-                    LOG_DEBUG("Windows restored");
-                    stop_rendering = false;
-                    break;
-                default:
-                    break;
+            case SDL_EVENT_QUIT:
+                quit = true;
+                break;
+            case SDL_EVENT_WINDOW_MINIMIZED:
+                LOG_DEBUG("Window minimized");
+                stop_rendering = true;
+                break;
+            case SDL_EVENT_WINDOW_RESTORED:
+                LOG_DEBUG("Windows restored");
+                stop_rendering = false;
+                break;
+            default:
+                break;
             }
             // Send SDL event to imgui here
             // ImGui_ImplSDL3_ProcessEvent(&e);

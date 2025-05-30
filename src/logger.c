@@ -6,20 +6,20 @@
 
 #define TIMEBUF_MAX 32
 
-#define COLOR_RED "\x1b[31m"
+#define COLOR_RED    "\x1b[31m"
 #define COLOR_YELLOW "\x1b[33m"
-#define COLOR_GREEN "\x1b[32m"
-#define COLOR_BLUE "\x1b[34m"
-// #define COLOR_MAGENTA "\x1b[35m"
-#define COLOR_CYAN "\x1b[36m"
-#define COLOR_RESET "\x1b[0m"
+#define COLOR_GREEN  "\x1b[32m"
+#define COLOR_BLUE   "\x1b[34m"
+#define COLOR_CYAN   "\x1b[36m"
+#define COLOR_RESET  "\x1b[0m"
 
 static bool logging_to_file = true;      // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 static FILE* fp_log = NULL;              // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 static const char* log_file_name = NULL; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 static const char* const levels[] = {"[ERROR] ", "[WARN] ", "[INFO] ", "[DEBUG] ", "[TRACE] "};
 
-void logger_open(const char* file_name) {
+void logger_open(const char* file_name)
+{
     // If file_name == NULL, set logging to stderr
     if(file_name == NULL) {
         fp_log = stderr;
@@ -38,7 +38,8 @@ void logger_open(const char* file_name) {
     LOG_INFO("Log file opened: %s", log_file_name);
 }
 
-void logger_close(void) {
+void logger_close(void)
+{
     if(!logging_to_file)
         return;
 
@@ -56,7 +57,8 @@ void logger_close(void) {
     }
 }
 
-void logger__msg(int level, const char* file, int line, const char* fmt, ...) {
+void logger__msg(int level, const char* file, int line, const char* fmt, ...)
+{
     // UNUSED
     (void)file;
     (void)line;
@@ -67,12 +69,24 @@ void logger__msg(int level, const char* file, int line, const char* fmt, ...) {
 
     // Set the color based on the log level of the message
     switch(level) {
-        case LOG_LEVEL_ERROR: color = COLOR_RED; break;
-        case LOG_LEVEL_WARN: color = COLOR_YELLOW; break;
-        case LOG_LEVEL_INFO: color = COLOR_GREEN; break;
-        case LOG_LEVEL_DEBUG: color = COLOR_BLUE; break;
-        case LOG_LEVEL_TRACE: color = COLOR_CYAN; break;
-        default: color = COLOR_RESET; break;
+    case LOG_LEVEL_ERROR:
+        color = COLOR_RED;
+        break;
+    case LOG_LEVEL_WARN:
+        color = COLOR_YELLOW;
+        break;
+    case LOG_LEVEL_INFO:
+        color = COLOR_GREEN;
+        break;
+    case LOG_LEVEL_DEBUG:
+        color = COLOR_BLUE;
+        break;
+    case LOG_LEVEL_TRACE:
+        color = COLOR_CYAN;
+        break;
+    default:
+        color = COLOR_RESET;
+        break;
     }
 
     // Get the current time
@@ -101,7 +115,8 @@ void logger__msg(int level, const char* file, int line, const char* fmt, ...) {
         ret = fprintf(fp_log, "%s %s", timebuf, levels[level]);
         if(ret < 0)
             return;
-    } else {
+    }
+    else {
         ret = fprintf(fp_log, "%s %s%s%s", timebuf, color, levels[level], COLOR_RESET);
         if(ret < 0)
             return;

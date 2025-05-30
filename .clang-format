@@ -9,13 +9,13 @@ AlignConsecutiveAssignments:
   AlignCompound:    false
   AlignFunctionPointers: false
   PadOperators:    false
-# AlignConsecutiveBitFields:
-#   Enabled:         false
-#   AcrossEmptyLines: false
-#   AcrossComments:  false
-#   AlignCompound:   false
-#   AlignFunctionPointers: false
-#   PadOperators:    false
+AlignConsecutiveBitFields:
+  Enabled:         false
+  AcrossEmptyLines: false
+  AcrossComments:  false
+  AlignCompound:   false
+  AlignFunctionPointers: false
+  PadOperators:    false
 AlignConsecutiveDeclarations:
   Enabled:          false
   AcrossEmptyLines: false
@@ -24,7 +24,7 @@ AlignConsecutiveDeclarations:
   AlignFunctionPointers: false
   PadOperators:     false 
 AlignConsecutiveMacros:
-  Enabled:          false
+  Enabled:          true
   AcrossEmptyLines: false
   AcrossComments:   false
   AlignCompound:    false
@@ -36,12 +36,12 @@ AlignConsecutiveShortCaseStatements:
   AcrossComments:   false
   AlignCaseColons:  false
 AlignEscapedNewlines: Right
-AlignOperands: Align
+AlignOperands: DontAlign
 AlignTrailingComments:
   Kind:            Always
   OverEmptyLines:  0
-AllowAllArgumentsOnNextLine: true
-AllowAllParametersOfDeclarationOnNextLine: true
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
 AllowBreakBeforeNoexceptSpecifier: Never
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
@@ -57,18 +57,19 @@ AttributeMacros:
 BinPackArguments:  true
 BinPackParameters: true
 BitFieldColonSpacing: Both
+BreakBeforeBraces: Custom
 BraceWrapping:
   AfterCaseLabel: false
   AfterControlStatement: Never
   AfterEnum:        false
   AfterExternBlock: false
-  AfterFunction:    false
+  AfterFunction:    true
   AfterNamespace:   false
   AfterObjCDeclaration: false
   AfterStruct:      false
   AfterUnion:       false
   BeforeCatch:      false
-  BeforeElse:       false
+  BeforeElse:       true
   BeforeLambdaBody: false
   BeforeWhile:      false
   IndentBraces:     false
@@ -80,9 +81,8 @@ BreakAfterJavaFieldAnnotations: false
 BreakArrays: true
 BreakBeforeBinaryOperators: None
 BreakBeforeConceptDeclarations: Always
-BreakBeforeBraces: Attach
 BreakBeforeInlineASMColon: OnlyMultiline
-BreakBeforeTernaryOperators: true
+BreakBeforeTernaryOperators: false
 BreakConstructorInitializers: BeforeColon
 BreakInheritanceList: BeforeColon
 BreakStringLiterals: true
@@ -122,7 +122,7 @@ IncludeIsMainRegex: '(Test)?$'
 IncludeIsMainSourceRegex: ''
 IndentAccessModifiers: false
 IndentCaseBlocks: true
-IndentCaseLabels: true
+IndentCaseLabels: false
 IndentExternBlock: AfterExternBlock
 IndentGotoLabels: true
 IndentPPDirectives: None
@@ -147,8 +147,8 @@ MacroBlockBegin: ''
 MacroBlockEnd:   ''
 MaxEmptyLinesToKeep: 1
 PackConstructorInitializers: BinPack
-PenaltyBreakAssignment: 2
-PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakAssignment: 50
+PenaltyBreakBeforeFirstCallParameter: 100
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
 PenaltyBreakOpenParenthesis: 0

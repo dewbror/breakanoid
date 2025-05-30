@@ -11,12 +11,12 @@ typedef struct game_s {
 } game_t;
 
 /**
- * \brief Initiate a game.
+ * \brief Initiate the game.
  */
 error_t game_init(struct vulkan_engine_s* p_engine, game_t* p_game);
 
 /**
- * \brief Destroy a game.
+ * \brief Destroy the game.
  */
 error_t game_destroy(game_t* p_game);
 

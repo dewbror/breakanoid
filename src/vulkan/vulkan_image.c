@@ -14,7 +14,8 @@
 static VkImageSubresourceRange img_subresource_Range(VkImageAspectFlags aspect_mask);
 
 error_t vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint32_t width, uint32_t height,
-    allocated_image_t* p_allocated_image) {
+    allocated_image_t* p_allocated_image)
+{
     if(device == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: device is NULL", __func__);
 
@@ -146,7 +147,8 @@ error_t vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, u
 //     return true;
 // }
 
-void vulkan_image_destroy(void* p_void_allocated_image_del_struct) {
+void vulkan_image_destroy(void* p_void_allocated_image_del_struct)
+{
     LOG_DEBUG("Callback: vulkan_destroy_image");
 
     if(p_void_allocated_image_del_struct == NULL) {
@@ -160,19 +162,20 @@ void vulkan_image_destroy(void* p_void_allocated_image_del_struct) {
     allocated_image_del_strut_t* p_allocated_image_del_struct =
         (allocated_image_del_strut_t*)p_void_allocated_image_del_struct;
 
-    vkDestroyImage(
-        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image, VK_NULL_HANDLE);
-    vkFreeMemory(
-        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.mem, VK_NULL_HANDLE);
-    vkDestroyImageView(
-        p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image_view, VK_NULL_HANDLE);
+    vkDestroyImage(p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image,
+        VK_NULL_HANDLE);
+    vkFreeMemory(p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.mem,
+        VK_NULL_HANDLE);
+    vkDestroyImageView(p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image_view,
+        VK_NULL_HANDLE);
 
     free(p_allocated_image_del_struct);
     p_allocated_image_del_struct = NULL;
     p_void_allocated_image_del_struct = NULL;
 }
 
-void vulkan_image_transition(VkCommandBuffer cmd, VkImage img, VkImageLayout old_layout, VkImageLayout new_layout) {
+void vulkan_image_transition(VkCommandBuffer cmd, VkImage img, VkImageLayout old_layout, VkImageLayout new_layout)
+{
     // VkImageMemoryBarrier2 contains the information for a given image barrier. On here, is where we set the old and
     // new layouts. In the StageMask, we are doing ALL_COMMANDS. This is inefficient, as it will stall the GPU pipeline
     // a bit. For our needs, its going to be fine as we are only going to do a few transitions per frame. If you are
@@ -195,38 +198,38 @@ void vulkan_image_transition(VkCommandBuffer cmd, VkImage img, VkImageLayout old
     img_barrier2.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
     switch(old_layout) { // NOLINT
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            img_barrier2.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-            break;
-        default:
-            img_barrier2.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
-            break;
+    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+        img_barrier2.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        break;
+    default:
+        img_barrier2.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+        break;
     }
 
     img_barrier2.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 
     switch(new_layout) { // NOLINT
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-            img_barrier2.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            img_barrier2.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-            img_barrier2.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT; 
-            img_barrier2.dstAccessMask = 0;
-            break;
-        default:
-            img_barrier2.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
-            break;
+    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+        img_barrier2.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+        break;
+    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+        img_barrier2.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        break;
+    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+        img_barrier2.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+        img_barrier2.dstAccessMask = 0;
+        break;
+    default:
+        img_barrier2.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+        break;
     }
 
     img_barrier2.oldLayout = old_layout;
     img_barrier2.newLayout = new_layout;
 
-    VkImageAspectFlags aspect_mask = (new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
-                                         ? VK_IMAGE_ASPECT_DEPTH_BIT
-                                         : VK_IMAGE_ASPECT_COLOR_BIT;
+    VkImageAspectFlags aspect_mask = (new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ?
+        VK_IMAGE_ASPECT_DEPTH_BIT :
+        VK_IMAGE_ASPECT_COLOR_BIT;
     img_barrier2.subresourceRange = img_subresource_Range(aspect_mask);
     img_barrier2.image = img;
 
@@ -238,7 +241,8 @@ void vulkan_image_transition(VkCommandBuffer cmd, VkImage img, VkImageLayout old
     vkCmdPipelineBarrier2(cmd, &dep_info);
 }
 
-static VkImageSubresourceRange img_subresource_Range(VkImageAspectFlags aspect_mask) {
+static VkImageSubresourceRange img_subresource_Range(VkImageAspectFlags aspect_mask)
+{
     VkImageSubresourceRange sub_image = {0};
     sub_image.aspectMask = aspect_mask;
     sub_image.baseMipLevel = 0;
@@ -249,8 +253,9 @@ static VkImageSubresourceRange img_subresource_Range(VkImageAspectFlags aspect_m
     return sub_image;
 }
 
-void vulkan_image_copy_image_to_image(
-    VkCommandBuffer cmd, VkImage src_img, VkImage dst_img, VkExtent2D src_ext, VkExtent2D dst_ext) {
+void vulkan_image_copy_image_to_image(VkCommandBuffer cmd, VkImage src_img, VkImage dst_img, VkExtent2D src_ext,
+    VkExtent2D dst_ext)
+{
     VkImageBlit2 blit_region = {0};
     blit_region.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
 

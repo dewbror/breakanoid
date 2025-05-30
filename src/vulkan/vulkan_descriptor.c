@@ -6,6 +6,7 @@
 #include "error/error.h"
 #include "error/vulkan_error.h"
 #include "logger.h"
+
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_descriptor.h"
 
@@ -13,11 +14,12 @@ static bool pool_init(VkDevice device, uint32_t max_sets, pool_size_ratio_t* p_p
     VkDescriptorPool* p_pool);
 
 error_t vulkan_descriptor_init(VkDevice device, allocated_image_t* p_draw_image,
-    descriptor_allocator_t* p_descriptor_allocator, VkDescriptorSet* p_draw_image_desc, VkDescriptorSetLayout* p_draw_image_desc_layout) {
+    descriptor_allocator_t* p_descriptor_allocator, VkDescriptorSet* p_draw_image_desc,
+    VkDescriptorSetLayout* p_draw_image_desc_layout)
+{
     pool_size_ratio_t sizes = {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1};
-    if(!pool_init(device, 10, &sizes, 1, &p_descriptor_allocator->pool)) {
+    if(!pool_init(device, 10, &sizes, 1, &p_descriptor_allocator->pool))
         return error_init(ERR_SRC_CORE, ERR_TEMP, "Failed to init pool");
-    }
 
     uint32_t bindings_count = 1;
     VkDescriptorSetLayoutBinding p_bindings[1];
@@ -40,8 +42,8 @@ error_t vulkan_descriptor_init(VkDevice device, allocated_image_t* p_draw_image,
     layout_info.flags = 0;
 
     if(vkCreateDescriptorSetLayout(device, &layout_info, VK_NULL_HANDLE, p_draw_image_desc_layout) != VK_SUCCESS) {
-        return error_init(
-            ERR_SRC_VULKAN, VULKAN_ERR_CREATE_DESCRIPTOR_SET_LAYOUT, "Failed to create descriptor set layout");
+        return error_init(ERR_SRC_VULKAN, VULKAN_ERR_CREATE_DESCRIPTOR_SET_LAYOUT,
+            "Failed to create descriptor set layout");
     }
 
     VkDescriptorSetAllocateInfo alloc_info = {0};
@@ -71,11 +73,12 @@ error_t vulkan_descriptor_init(VkDevice device, allocated_image_t* p_draw_image,
     return SUCCESS;
 }
 
-void vulkan_descriptor_destroy(void* p_void_vulkan_desc_del) {
+void vulkan_descriptor_destroy(void* p_void_vulkan_desc_del)
+{
     LOG_DEBUG("Callback: %s", __func__);
     // Cast pointer
     vulkan_desc_del_t* p_vulkan_desc = (vulkan_desc_del_t*)p_void_vulkan_desc_del;
-    
+
     vkDestroyDescriptorPool(p_vulkan_desc->device, p_vulkan_desc->pool, VK_NULL_HANDLE);
     vkDestroyDescriptorSetLayout(p_vulkan_desc->device, p_vulkan_desc->desc_layout, VK_NULL_HANDLE);
 
@@ -85,13 +88,15 @@ void vulkan_descriptor_destroy(void* p_void_vulkan_desc_del) {
 }
 
 static bool pool_init(VkDevice device, uint32_t max_sets, pool_size_ratio_t* p_pool_ratios,
-    const size_t pool_ratios_count, VkDescriptorPool* p_pool) {
+    const size_t pool_ratios_count, VkDescriptorPool* p_pool)
+{
     LOG_DEBUG("%s", __func__);
-    VkDescriptorPoolSize* p_pool_sizes =
-        (VkDescriptorPoolSize*)malloc(pool_ratios_count * sizeof(VkDescriptorPoolSize));
+
+    VkDescriptorPoolSize* p_pool_sizes = (VkDescriptorPoolSize*)malloc(
+        pool_ratios_count * sizeof(VkDescriptorPoolSize));
     if(p_pool_sizes == NULL) {
-        LOG_ERROR(
-            "%s: Failed to allocate memory of size %lu", __func__, pool_ratios_count * sizeof(VkDescriptorPoolSize));
+        LOG_ERROR("%s: Failed to allocate memory of size %lu", __func__,
+            pool_ratios_count * sizeof(VkDescriptorPoolSize));
         return false;
     }
 

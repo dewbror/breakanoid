@@ -16,7 +16,7 @@ typedef enum {
 } error_src_t;
 
 /**
- * Core error codes.
+ * Enum for core error codes.
  */
 typedef enum {
     ERR_NONE = 0,

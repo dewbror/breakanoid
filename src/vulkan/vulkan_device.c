@@ -41,7 +41,8 @@ static bool is_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice physical_d
  */
 static bool check_device_extension_support(VkPhysicalDevice physical_device);
 
-error_t vulkan_physical_device_init(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* p_physical_device) {
+error_t vulkan_physical_device_init(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* p_physical_device)
+{
     if(instance == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: instance is NULL", __func__);
 
@@ -73,7 +74,8 @@ error_t vulkan_physical_device_init(VkInstance instance, VkSurfaceKHR surface, V
             // msaa_samples    = get_maxUsable_sample_count(p_engine->physical_device);
             // p_engine->msaa_samples = VK_SAMPLE_COUNT_1_BIT;
             break;
-        } else {
+        }
+        else {
             p_physical_device = NULL;
         }
     }
@@ -90,7 +92,8 @@ error_t vulkan_physical_device_init(VkInstance instance, VkSurfaceKHR surface, V
     return SUCCESS;
 }
 
-static bool is_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice physical_device) {
+static bool is_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice physical_device)
+{
     // ALL DEVICE PROP. AND FEAT. QUERY SHOULD BE MOVED TO OWN func(S)
 
     // Query basic device properties
@@ -218,8 +221,9 @@ static bool is_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice physical_d
     return true;
 }
 
-bool vulkan_device_get_queue_families(
-    VkSurfaceKHR surface, VkPhysicalDevice physical_device, queue_family_data_t* p_queues) {
+bool vulkan_device_get_queue_families(VkSurfaceKHR surface, VkPhysicalDevice physical_device,
+    queue_family_data_t* p_queues)
+{
     if(surface == NULL) {
         LOG_ERROR("%s: surface is NULL", __func__);
         return false;
@@ -249,8 +253,8 @@ bool vulkan_device_get_queue_families(
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, VK_NULL_HANDLE);
 
     // Query queue families
-    VkQueueFamilyProperties* queue_families =
-        (VkQueueFamilyProperties*)malloc(queue_family_count * sizeof(VkQueueFamilyProperties));
+    VkQueueFamilyProperties* queue_families = (VkQueueFamilyProperties*)malloc(
+        queue_family_count * sizeof(VkQueueFamilyProperties));
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_families);
 
     bool got_graphics = false;
@@ -294,13 +298,14 @@ bool vulkan_device_get_queue_families(
     return false;
 }
 
-static bool check_device_extension_support(VkPhysicalDevice physical_device) {
+static bool check_device_extension_support(VkPhysicalDevice physical_device)
+{
     // Query available device extensions count
     uint32_t available_extensions_count = 0;
     vkEnumerateDeviceExtensionProperties(physical_device, VK_NULL_HANDLE, &available_extensions_count, VK_NULL_HANDLE);
 
-    VkExtensionProperties* available_extensions =
-        (VkExtensionProperties*)malloc(available_extensions_count * sizeof(VkExtensionProperties));
+    VkExtensionProperties* available_extensions = (VkExtensionProperties*)malloc(
+        available_extensions_count * sizeof(VkExtensionProperties));
 
     if(available_extensions == NULL) {
         LOG_ERROR("%s: Failed to allocated memory of size %lu", __func__,
@@ -308,8 +313,8 @@ static bool check_device_extension_support(VkPhysicalDevice physical_device) {
         return false;
     }
 
-    vkEnumerateDeviceExtensionProperties(
-        physical_device, VK_NULL_HANDLE, &available_extensions_count, available_extensions);
+    vkEnumerateDeviceExtensionProperties(physical_device, VK_NULL_HANDLE, &available_extensions_count,
+        available_extensions);
 
 #ifndef NDEBUG
     LOG_DEBUG("Available device extensions");
@@ -341,8 +346,9 @@ static bool check_device_extension_support(VkPhysicalDevice physical_device) {
     return true;
 }
 
-bool vulkan_device_get_swapchain_support(
-    VkSurfaceKHR surface, VkPhysicalDevice physical_device, swapchain_support_details_t* p_details) {
+bool vulkan_device_get_swapchain_support(VkSurfaceKHR surface, VkPhysicalDevice physical_device,
+    swapchain_support_details_t* p_details)
+{
     if(surface == NULL) {
         LOG_ERROR("%s: surface is NULL", __func__);
         return false;
@@ -373,7 +379,8 @@ bool vulkan_device_get_swapchain_support(
         p_details->formats = (VkSurfaceFormatKHR*)malloc(formats_count * sizeof(VkSurfaceFormatKHR));
         vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &formats_count, p_details->formats);
         p_details->formats_count = formats_count;
-    } else {
+    }
+    else {
         LOG_ERROR("Device swapchain surface formats unsupported");
         return false;
     }
@@ -383,10 +390,11 @@ bool vulkan_device_get_swapchain_support(
     vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_modes_count, VK_NULL_HANDLE);
     if(present_modes_count != 0) {
         p_details->present_modes = (VkPresentModeKHR*)malloc(present_modes_count * sizeof(VkPresentModeKHR));
-        vkGetPhysicalDeviceSurfacePresentModesKHR(
-            physical_device, surface, &present_modes_count, p_details->present_modes);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_modes_count,
+            p_details->present_modes);
         p_details->present_modes_count = present_modes_count;
-    } else {
+    }
+    else {
         LOG_ERROR("Device swapchin surface present modes unsupported");
         return false;
     }
@@ -396,8 +404,9 @@ bool vulkan_device_get_swapchain_support(
     return true;
 }
 
-error_t vulkan_device_init(
-    VkSurfaceKHR surface, VkPhysicalDevice physical_device, VkDevice* p_device, queue_family_data_t* p_queues) {
+error_t vulkan_device_init(VkSurfaceKHR surface, VkPhysicalDevice physical_device, VkDevice* p_device,
+    queue_family_data_t* p_queues)
+{
     if(surface == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: surface is NULL", __func__);
 
@@ -419,7 +428,8 @@ error_t vulkan_device_init(
     if(p_queues->graphics_index == p_queues->present_index) {
         // The graphics and present queue families are the same, this is the most common situation
         unique_q_fams_count = 1;
-    } else {
+    }
+    else {
         // They are not the same, not common but we will support it?
         unique_q_fams_count = 2;
     }
@@ -436,16 +446,18 @@ error_t vulkan_device_init(
     // Fill allocated arrat with the queue family indices
     if(unique_q_fams_count == 1) {
         unique_q_fams[0] = p_queues->graphics_index;
-    } else if(unique_q_fams_count == 2) {
+    }
+    else if(unique_q_fams_count == 2) {
         unique_q_fams[0] = p_queues->graphics_index;
         unique_q_fams[1] = p_queues->present_index;
-    } else {
+    }
+    else {
         return error_init(ERR_SRC_CORE, ERR_TEMP, "More than two queue families is unsupported currently");
     }
 
     // Create array of device queue create infos
-    VkDeviceQueueCreateInfo* q_create_infos =
-        (VkDeviceQueueCreateInfo*)malloc(unique_q_fams_count * sizeof(VkDeviceQueueCreateInfo));
+    VkDeviceQueueCreateInfo* q_create_infos = (VkDeviceQueueCreateInfo*)malloc(
+        unique_q_fams_count * sizeof(VkDeviceQueueCreateInfo));
     if(q_create_infos == NULL)
         return error_init(ERR_SRC_CORE, ERR_TEMP, "%s: Failed to allocate memory of size %lu", __func__,
             unique_q_fams_count * sizeof(VkDeviceQueueCreateInfo));
@@ -516,7 +528,8 @@ error_t vulkan_device_init(
     return SUCCESS;
 }
 
-void vulkan_device_destroy(void* p_void_device) {
+void vulkan_device_destroy(void* p_void_device)
+{
     LOG_DEBUG("Callback: vulkan_device_destroy");
 
     if(p_void_device == NULL) {

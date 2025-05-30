@@ -1,13 +1,14 @@
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "util/deletion_stack.h"
 #include "logger.h"
 #include "error/error.h"
 
-deletion_stack_t* deletion_stack_init(void) {
+#include "util/deletion_stack.h"
+
+deletion_stack_t* deletion_stack_init(void)
+{
     // Allocate new deletion stack
     deletion_stack_t* p_queue = (deletion_stack_t*)malloc(sizeof(deletion_stack_t));
     if(p_queue == NULL) {
@@ -23,16 +24,16 @@ deletion_stack_t* deletion_stack_init(void) {
     return p_queue;
 }
 
-error_t deletion_stack_push(deletion_stack_t* p_stack, void* p_resource, void (*delete_func)(void*)) {
+error_t deletion_stack_push(deletion_stack_t* p_stack, void* p_resource, void (*delete_func)(void*))
+{
     if(p_stack == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_stack is NULL", __func__);
 
     // Allocate memory for new deletion_node
     deletion_node_t* p_new_node = (deletion_node_t*)malloc(sizeof(deletion_node_t));
     if(p_new_node == NULL)
-        return error_init(
-            ERR_SRC_CORE, ERR_MALLOC, "%s: Failed to allocate memory of size %lu", __func__, sizeof(deletion_node_t)
-        );
+        return error_init(ERR_SRC_CORE, ERR_MALLOC, "%s: Failed to allocate memory of size %lu", __func__,
+            sizeof(deletion_node_t));
 
     // Set the new deletion_node fields
     p_new_node->p_resource = p_resource;
@@ -42,7 +43,8 @@ error_t deletion_stack_push(deletion_stack_t* p_stack, void* p_resource, void (*
     // Make sure the new node points to the previous node
     if(p_stack->p_last != NULL) {
         p_new_node->p_prev = p_stack->p_last;
-    } else {
+    }
+    else {
         p_stack->p_first = p_new_node;
     }
 
@@ -53,7 +55,8 @@ error_t deletion_stack_push(deletion_stack_t* p_stack, void* p_resource, void (*
     return SUCCESS;
 }
 
-error_t deletion_stack_flush(deletion_stack_t** pp_queue) {
+error_t deletion_stack_flush(deletion_stack_t** pp_queue)
+{
     // Check if pp_queue is NULL
     if(pp_queue == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: pp_queue is NULL", __func__);

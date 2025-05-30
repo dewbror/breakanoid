@@ -4,10 +4,12 @@
 #include "error/error.h"
 #include "error/vulkan_error.h"
 #include "logger.h"
+
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_cmd.h"
 
-error_t vulkan_cmd_frame_init(VkDevice device, queue_family_data_t* p_queues, frame_data_t* p_frames) {
+error_t vulkan_cmd_frame_init(VkDevice device, const queue_family_data_t* p_queues, frame_data_t* p_frames)
+{
     if(device == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_engine is NULL", __func__);
 
@@ -47,7 +49,8 @@ error_t vulkan_cmd_frame_init(VkDevice device, queue_family_data_t* p_queues, fr
 }
 
 error_t vulkan_cmd_imm_init(VkDevice device, const queue_family_data_t* p_queues, VkCommandPool* p_imm_cmd_pool,
-    VkCommandBuffer* p_imm_cmd_buff) {
+    VkCommandBuffer* p_imm_cmd_buff)
+{
     if(device == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: device is NULL", __func__);
 
@@ -79,7 +82,8 @@ error_t vulkan_cmd_imm_init(VkDevice device, const queue_family_data_t* p_queues
     return SUCCESS;
 }
 
-void vulkan_cmd_pool_destroy(void* p_void_cmd_del_struct) {
+void vulkan_cmd_pool_destroy(void* p_void_cmd_del_struct)
+{
     LOG_DEBUG("Callback: vulkan_cmd_pool_destroy");
 
     if(p_void_cmd_del_struct == NULL) {
@@ -99,7 +103,8 @@ void vulkan_cmd_pool_destroy(void* p_void_cmd_del_struct) {
     p_void_cmd_del_struct = NULL;
 }
 
-VkCommandBufferSubmitInfo vulkan_cmd_get_buffer_submit_info(VkCommandBuffer cmd) {
+VkCommandBufferSubmitInfo vulkan_cmd_get_buffer_submit_info(VkCommandBuffer cmd)
+{
     VkCommandBufferSubmitInfo info = {0};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
     info.commandBuffer = cmd;
@@ -108,8 +113,9 @@ VkCommandBufferSubmitInfo vulkan_cmd_get_buffer_submit_info(VkCommandBuffer cmd)
     return info;
 }
 
-VkSubmitInfo2 vulkan_cmd_get_submit_info2(VkCommandBufferSubmitInfo* cmd_buffer_submit_info,
-    VkSemaphoreSubmitInfo* signal_semaphore_submit_info, VkSemaphoreSubmitInfo* wait_semaphore_sbmit_info) {
+VkSubmitInfo2 vulkan_cmd_get_submit_info2(const VkCommandBufferSubmitInfo* cmd_buffer_submit_info,
+    const VkSemaphoreSubmitInfo* signal_semaphore_submit_info, const VkSemaphoreSubmitInfo* wait_semaphore_sbmit_info)
+{
     // We will be using vkQueueSubmit2 for submitting our commands. This is part of syncronization-2 and is an updated
     // version of the older VkQueueSubmit from vulkan 1.0. The function call requires a VkSubmitInfo2 which contains the
     // information on the semaphores used as part of the submit, and we can give it a Fence so that we can check for
@@ -118,13 +124,13 @@ VkSubmitInfo2 vulkan_cmd_get_submit_info2(VkCommandBufferSubmitInfo* cmd_buffer_
     // check the vkinit functions for those.
 
     VkSubmitInfo2 info = {0};
-    info.sType                    = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-    info.waitSemaphoreInfoCount   = wait_semaphore_sbmit_info == VK_NULL_HANDLE ? 0 : 1;
-    info.pWaitSemaphoreInfos      = wait_semaphore_sbmit_info;
+    info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    info.waitSemaphoreInfoCount = wait_semaphore_sbmit_info == VK_NULL_HANDLE ? 0 : 1;
+    info.pWaitSemaphoreInfos = wait_semaphore_sbmit_info;
     info.signalSemaphoreInfoCount = signal_semaphore_submit_info == VK_NULL_HANDLE ? 0 : 1;
-    info.pSignalSemaphoreInfos    = signal_semaphore_submit_info;
-    info.commandBufferInfoCount   = 1;
-    info.pCommandBufferInfos      = cmd_buffer_submit_info;
+    info.pSignalSemaphoreInfos = signal_semaphore_submit_info;
+    info.commandBufferInfoCount = 1;
+    info.pCommandBufferInfos = cmd_buffer_submit_info;
 
     return info;
 }

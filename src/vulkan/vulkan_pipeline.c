@@ -18,7 +18,8 @@ static error_t background_pipeline_init(VkDevice device, VkPhysicalDevice physic
 
 error_t vulkan_pipeline_init(VkDevice device, VkPhysicalDevice physical_device, VkExtent2D window_extent,
     VkDescriptorSetLayout* p_draw_image_desc_layout, VkPipelineLayout* p_gradient_pipeline_layout,
-    VkPipeline* p_gradient_pipeline) {
+    VkPipeline* p_gradient_pipeline)
+{
     error_t err = background_pipeline_init(device, physical_device, window_extent, p_draw_image_desc_layout,
         p_gradient_pipeline_layout, p_gradient_pipeline);
     if(err.code != 0)
@@ -31,7 +32,8 @@ error_t vulkan_pipeline_init(VkDevice device, VkPhysicalDevice physical_device, 
 
 static error_t background_pipeline_init(VkDevice device, VkPhysicalDevice physical_device, VkExtent2D window_extent,
     VkDescriptorSetLayout* p_draw_image_desc_layout, VkPipelineLayout* p_gradient_pipeline_layout,
-    VkPipeline* p_gradient_pipeline) {
+    VkPipeline* p_gradient_pipeline)
+{
     VkPhysicalDeviceProperties properties = {0};
     vkGetPhysicalDeviceProperties(physical_device, &properties);
 
@@ -79,8 +81,8 @@ static error_t background_pipeline_init(VkDevice device, VkPhysicalDevice physic
 
     uint32_t* p_buf = (uint32_t*)malloc(code_size);
     if(p_buf == NULL)
-        return error_init(
-            ERR_SRC_CORE, ERR_MALLOC, "Failed to allocate memory of size %lu", (size_t)size * sizeof(char));
+        return error_init(ERR_SRC_CORE, ERR_MALLOC, "Failed to allocate memory of size %lu",
+            (size_t)size * sizeof(char));
 
     size_t ret_LU = fread(p_buf, 1, code_size, shader_file);
     if(ret_LU < code_size)
@@ -153,7 +155,8 @@ static error_t background_pipeline_init(VkDevice device, VkPhysicalDevice physic
     return SUCCESS;
 }
 
-void vulkan_pipeline_destroy(void* p_void_vulkan_pipeline_del) {
+void vulkan_pipeline_destroy(void* p_void_vulkan_pipeline_del)
+{
     LOG_DEBUG("Callback: %s", __func__);
 
     // Cast pointer

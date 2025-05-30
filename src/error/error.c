@@ -5,9 +5,10 @@
 #include "error/error.h"
 #include "logger.h"
 
-error_t error_init(const error_src_t src, const int code, const char* fmt, ...) {
+error_t error_init(const error_src_t src, const int code, const char* fmt, ...)
+{
     va_list args;
-    
+
     // Get the size of the array we need to allocate
     va_start(args, fmt);
     int len = vsnprintf(NULL, 0, fmt, args);
@@ -44,7 +45,8 @@ error_t error_init(const error_src_t src, const int code, const char* fmt, ...) 
     return (error_t){msg, src, code};
 }
 
-void error_destroy(error_t* p_err) {
+void error_destroy(error_t* p_err)
+{
     if(p_err == NULL) {
         LOG_ERROR("%s: p_err is NULL", __func__);
         return;

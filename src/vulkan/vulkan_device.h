@@ -32,8 +32,8 @@ error_t vulkan_physical_device_init(VkInstance instance, VkSurfaceKHR surface, V
  *
  * \warning This funciton dynamically allocates arrays in it which must be freed!
  */
-bool vulkan_device_get_swapchain_support(
-    VkSurfaceKHR surface, VkPhysicalDevice physical_device, swapchain_support_details_t* swapchain_support);
+bool vulkan_device_get_swapchain_support(VkSurfaceKHR surface, VkPhysicalDevice physical_device,
+    swapchain_support_details_t* swapchain_support);
 
 /**
  * \brief Check and get queue family indices.
@@ -46,8 +46,8 @@ bool vulkan_device_get_swapchain_support(
  * \param[out] p_queues Pointer to a queue_family_data_t which stores the indices if they are found.
  * \return True if both a grapics queue family and a present queue family was found.
  */
-bool vulkan_device_get_queue_families(
-    VkSurfaceKHR surface, VkPhysicalDevice physical_device, queue_family_data_t* p_queues);
+bool vulkan_device_get_queue_families(VkSurfaceKHR surface, VkPhysicalDevice physical_device,
+    queue_family_data_t* p_queues);
 
 /**
  * \brief Initiate vulkan logical device.
@@ -60,8 +60,7 @@ bool vulkan_device_get_queue_families(
  * \param[out] p_queues Pointer to the queue_family_data_t which will hold the queue information.
  * \return True if successful, else false.
  */
-error_t vulkan_device_init(
-    VkSurfaceKHR surface, VkPhysicalDevice physical_device, VkDevice* p_device,
+error_t vulkan_device_init(VkSurfaceKHR surface, VkPhysicalDevice physical_device, VkDevice* p_device,
     queue_family_data_t* p_queue_family_data);
 /**
  * \brief Destroy a vulkan device.

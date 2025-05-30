@@ -25,7 +25,7 @@ void vulkan_image_destroy(void* p_void_allocated_image_del_struct);
 
 void vulkan_image_transition(VkCommandBuffer cmd, VkImage img, VkImageLayout old_layout, VkImageLayout new_layout);
 
-void vulkan_image_copy_image_to_image(
-    VkCommandBuffer cmd, VkImage src_img, VkImage dst_img, VkExtent2D src_ext, VkExtent2D dst_ext);
+void vulkan_image_copy_image_to_image(VkCommandBuffer cmd, VkImage src_img, VkImage dst_img, VkExtent2D src_ext,
+    VkExtent2D dst_ext);
 
 #endif // VULKAN_IMAGE_H_

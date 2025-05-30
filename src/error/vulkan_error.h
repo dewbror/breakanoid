@@ -2,7 +2,7 @@
 #define VULKAN_ERROR_H_
 
 /**
- * The Vulkan error codes
+ * Enum for the Vulkan error codes
  */
 typedef enum {
     VULKAN_ERR_NONE = 0,
