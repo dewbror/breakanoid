@@ -5,23 +5,14 @@
 
 #include "error/error.h"
 
+#include "util/deletion_stack.h"
 #include "vulkan/vulkan_types.h"
-
-typedef struct allocated_image_del_struct_s {
-    VkDevice device;
-    allocated_image_t allocated_image;
-} allocated_image_del_strut_t;
 
 /**
  * \brief Create vulkan image.
  */
-error_t vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint32_t width, uint32_t height,
-    allocated_image_t* p_allocated_image);
-
-/**
- * Destroy vulkan image.
- */
-void vulkan_image_destroy(void* p_void_allocated_image_del_struct);
+error_t vulkan_image_create(deletion_stack_t* p_dstack, VkDevice device, VkPhysicalDevice physical_device,
+    uint32_t width, uint32_t height, allocated_image_t* p_allocated_image);
 
 void vulkan_image_transition(VkCommandBuffer cmd, VkImage img, VkImageLayout old_layout, VkImageLayout new_layout);
 

@@ -7,9 +7,18 @@
 #include "error/error.h"
 #include "error/vulkan_error.h"
 #include "logger.h"
+#include "util/deletion_stack.h"
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_device.h"
 #include "vulkan/vulkan_swapchain.h"
+
+/**
+ * Struct used for deleting swapchain.
+ */
+typedef struct swapchain_del_s {
+    VkDevice device;
+    vulkan_swapchain_t vulkan_swapchain;
+} swapchain_del_t;
 
 /**
  * Choose the swapchain surface format.
@@ -44,7 +53,15 @@ static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR* p_presen
  */
 static VkExtent2D choose_swapchain_extent(SDL_Window* p_window, VkSurfaceCapabilitiesKHR capabilities);
 
-error_t vulkan_swapchain_init(VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface,
+/**
+ * \brief Destroy vulkan swapchain.
+ *
+ * \param[in] p_void_vulkan_swapchain_del_struct Pointer to the vulkan_swapchain_del_struct_t containing the
+ * swapchain to be deleted.
+ */
+static void vulkan_swapchain_deinit(void* p_void_vulkan_swapchain_del_struct);
+
+error_t vulkan_swapchain_init(deletion_stack_t* p_dstack, VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface,
     SDL_Window* p_window, vulkan_swapchain_t* p_vulkan_swapchain)
 {
 
@@ -169,7 +186,7 @@ error_t vulkan_swapchain_init(VkDevice device, VkPhysicalDevice physical_device,
         VK_SUCCESS)
         return error_init(ERR_SRC_VULKAN, VULKAN_ERR_SWAPCHAIN, "Failed to create swapchain");
 
-    LOG_INFO("Swapchain created");
+    LOG_DEBUG("Vulkan swapchain created");
 
     // The swap chain has been created now, so all that remains is retrieving the handles of the VkImages in it.
     // We’ll reference these during rendering operations in later chapters. The images were created by the
@@ -240,56 +257,63 @@ error_t vulkan_swapchain_init(VkDevice device, VkPhysicalDevice physical_device,
 
         // Create image view
         if(vkCreateImageView(device, &view_info, VK_NULL_HANDLE, &p_vulkan_swapchain->p_image_views[i]) != VK_SUCCESS)
-            return error_init(ERR_SRC_VULKAN, VULKAN_ERR_IMAGE_VIEW, "Failed to create image view");
+            return error_init(ERR_SRC_VULKAN, VULKAN_ERR_IMAGE_VIEW, "%s: Failed to create image view", __func__);
     }
+
+    swapchain_del_t* p_swp_del = (swapchain_del_t*)malloc(sizeof(swapchain_del_t));
+    p_swp_del->device = device;
+    p_swp_del->vulkan_swapchain = *p_vulkan_swapchain;
+
+    error_t err = deletion_stack_push(p_dstack, p_swp_del, vulkan_swapchain_deinit);
+    if(err.code != 0) {
+        vulkan_swapchain_deinit(p_swp_del);
+        return err;
+    }
+
+    LOG_INFO("Vulkan swapchain initiated");
 
     return SUCCESS;
 }
 
-void vulkan_swapchain_destroy(void* p_void_vulkan_swapchain_del_struct)
+static void vulkan_swapchain_deinit(void* p_void_swp_del)
 {
     LOG_DEBUG("Callback: %s", __func__);
 
-    if(p_void_vulkan_swapchain_del_struct == NULL) {
-        LOG_ERROR("%s: p_void_vulkan_swapchain_del_struct is NULL", __func__);
+    if(p_void_swp_del == NULL) {
+        LOG_ERROR("%s: p_void_swp_del is NULL", __func__);
         return;
     }
 
     // Cast pointer
-    vulkan_swapchain_del_struct_t* p_vulkan_swapchain_del_struct =
-        (vulkan_swapchain_del_struct_t*)p_void_vulkan_swapchain_del_struct;
+    swapchain_del_t* p_swp_del = (swapchain_del_t*)p_void_swp_del;
 
-    if(p_vulkan_swapchain_del_struct->device == NULL) {
+    if(p_swp_del->device == NULL) {
         LOG_ERROR("%s: device is NULL", __func__);
         return;
     }
 
-    if(p_vulkan_swapchain_del_struct->vulkan_swapchain.swapchain == NULL) {
+    if(p_swp_del->vulkan_swapchain.swapchain == NULL) {
         LOG_ERROR("%s: swapchain is NULL", __func__);
         return;
     }
 
     // Destroy swapchain
-    vkDestroySwapchainKHR(p_vulkan_swapchain_del_struct->device,
-        p_vulkan_swapchain_del_struct->vulkan_swapchain.swapchain, VK_NULL_HANDLE);
+    vkDestroySwapchainKHR(p_swp_del->device, p_swp_del->vulkan_swapchain.swapchain, VK_NULL_HANDLE);
 
-    free(p_vulkan_swapchain_del_struct // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
-            ->vulkan_swapchain.p_images);
-    p_vulkan_swapchain_del_struct->vulkan_swapchain.p_images = NULL;
+    free(p_swp_del->vulkan_swapchain.p_images); // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+    p_swp_del->vulkan_swapchain.p_images = NULL;
 
-    for(uint32_t i = 0; i < p_vulkan_swapchain_del_struct->vulkan_swapchain.images_count; ++i) {
+    for(uint32_t i = 0; i < p_swp_del->vulkan_swapchain.images_count; ++i) {
         LOG_DEBUG("    Destroying swapchain image view, index: %u", i);
-        vkDestroyImageView(p_vulkan_swapchain_del_struct->device,
-            p_vulkan_swapchain_del_struct->vulkan_swapchain.p_image_views[i], VK_NULL_HANDLE);
+        vkDestroyImageView(p_swp_del->device, p_swp_del->vulkan_swapchain.p_image_views[i], VK_NULL_HANDLE);
     }
 
-    free(p_vulkan_swapchain_del_struct // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
-            ->vulkan_swapchain.p_image_views);
-    p_vulkan_swapchain_del_struct->vulkan_swapchain.p_image_views = NULL;
+    free(p_swp_del->vulkan_swapchain.p_image_views); // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
+    p_swp_del->vulkan_swapchain.p_image_views = NULL;
 
-    free(p_vulkan_swapchain_del_struct);
-    p_vulkan_swapchain_del_struct = NULL;
-    p_void_vulkan_swapchain_del_struct = NULL;
+    free(p_swp_del);
+    p_swp_del = NULL;
+    p_void_swp_del = NULL;
 }
 
 static VkSurfaceFormatKHR choose_swapchain_surface_format(VkSurfaceFormatKHR* p_formats, size_t formats_count)
@@ -322,6 +346,7 @@ static VkPresentModeKHR choose_swapchain_present_mode(VkPresentModeKHR* p_presen
     // that are as up-to-date as possible right until the vertical blank.
     for(size_t i = 0; i < present_modes_count; ++i) {
         if(p_present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+        // if(p_present_modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) {
             return p_present_modes[i];
         }
     }

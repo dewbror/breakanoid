@@ -68,7 +68,7 @@ typedef struct frame_data_s {
     VkSemaphore swapchain_semaphore;
     VkSemaphore render_semaphore;
     VkFence render_fence;
-    struct deletion_stack_s* p_del_stack;
+    struct deletion_stack_s* p_dstack;
 } frame_data_t;
 
 typedef struct pool_size_ratio_s {

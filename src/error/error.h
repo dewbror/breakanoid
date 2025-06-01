@@ -11,7 +11,7 @@
 typedef enum {
     ERR_SRC_NONE = 0, // Used for no error
     ERR_SRC_CORE,     // Error source is the core code
-    ERR_SRC_VULKAN,   // Error source is from a call to a Vulkan function
+    ERR_SRC_VULKAN,       // Error source is from a call to a Vulkan function
     ERR_SRC_SDL       // Error source is from a call to an SDL function
 } error_src_t;
 
@@ -39,12 +39,12 @@ typedef enum {
     ERR_DELETION_STACK_PUSH,
     ERR_DELETION_STACK_FLUSH,
 
-    // vulkan engine
-    ERR_VULKAN_ENGINE_INIT,
+    // vulkan context
+    ERR_VULKAN_CTX_INIT,
 
     // vulkan instance
     ERR_VULKAN_DRIVER_VERSION,
-    ERR_VULKAN_INSTANCE_DEBUG_MSG_INIT,
+    ERR_VULKAN_DEBUG_MSG_INIT,
 
     // vulkan device
     ERR_VULKAN_SUPPORTED_DEVICE,
@@ -87,6 +87,6 @@ error_t error_init(const error_src_t src, const int code, const char* fmt, ...) 
  *
  * This function frees the dynamically allocated msg field of the error_t struct.
  */
-void error_destroy(error_t* p_err);
+void error_deinit(error_t* p_err);
 
 #endif // ERROR_H_

@@ -5,19 +5,19 @@
 #include "error/error.h"
 #include "logger.h"
 
-#include "vulkan/vulkan_engine.h"
+#include "vulkan/vulkan_context.h"
 #include "game/game.h"
 #include "util/deletion_stack.h"
 
-error_t game_init(struct vulkan_engine_s* p_engine, game_t* p_game)
+error_t game_init(struct vulkan_context_s* p_vkctx, game_t* p_game)
 {
     // UNUSED
-    (void)p_engine;
+    (void)p_vkctx;
     (void)p_game;
 
     // Allocate game deletion queue
-    p_game->p_del_stack = deletion_stack_init();
-    if(p_game->p_del_stack == NULL)
+    p_game->p_dstack = deletion_stack_init();
+    if(p_game->p_dstack == NULL)
         return error_init(ERR_SRC_CORE, ERR_DELETION_STACK_INIT, "%s: Failed to initiate queue stack", __func__);
 
     LOG_INFO("Game initialized");
@@ -25,22 +25,22 @@ error_t game_init(struct vulkan_engine_s* p_engine, game_t* p_game)
     return SUCCESS;
 }
 
-error_t game_destroy(game_t* p_game)
+error_t game_deinit(game_t* p_game)
 {
     if(p_game == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_game is NULL", __func__);
 
     // Flush deletion queue
-    error_t err = deletion_stack_flush(&p_game->p_del_stack);
+    error_t err = deletion_stack_flush(&p_game->p_dstack);
     if(err.code != 0)
         return err;
 
-    LOG_INFO("Game destroyed");
+    LOG_DEBUG("Game deinitialized");
 
     return SUCCESS;
 }
 
-error_t game_run(struct vulkan_engine_s* p_engine, game_t* p_game)
+error_t game_run(struct vulkan_context_s* p_vkctx, game_t* p_game)
 {
     // UNUSED
     (void)p_game;
@@ -53,6 +53,7 @@ error_t game_run(struct vulkan_engine_s* p_engine, game_t* p_game)
         while(SDL_PollEvent(&e) != 0) {
             switch(e.type) {
             case SDL_EVENT_QUIT:
+                LOG_INFO("Quiting game")
                 quit = true;
                 break;
             case SDL_EVENT_WINDOW_MINIMIZED:
@@ -78,7 +79,7 @@ error_t game_run(struct vulkan_engine_s* p_engine, game_t* p_game)
         // Draw imgui here
 
         // Perform drawing here
-        vulkan_engine_render_and_present_frame(p_engine);
+        vulkan_render_and_present_frame(p_vkctx);
     }
 
     return SUCCESS;

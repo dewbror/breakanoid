@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <vulkan/vulkan_core.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_vulkan.h>
@@ -9,6 +10,7 @@
 
 #include "version.h"
 #include "logger.h"
+#include "util/deletion_stack.h"
 
 #include "vulkan/vulkan_instance.h"
 
@@ -19,6 +21,21 @@ static const bool enable_validation_layers = false;
 #else
 static const bool enable_validation_layers = true;
 #endif
+
+/**
+ * Struct used for deleting a debug messenger.
+ */
+typedef struct debug_msg_del_s {
+    VkInstance instance;
+    VkDebugUtilsMessengerEXT debug_msg;
+} debug_msg_del_t;
+
+/**
+ * \brief Destroy the vulkan instance.
+ *
+ * \param[in] p_void_instance The vulkan instance to be destroyed.
+ */
+static void vulkan_instance_deinit(void* p_void_instance);
 
 /**
  * Aquire the required instance layers. If enable_validation_layer = true, will add "VK_LAYER_KHRONOS_validation" to
@@ -70,6 +87,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
     void* p_user_data);
 
 /**
+ * \brief Destroy a debug messenger.
+ *
+ * Destroy a debug messenger using vkDestroyDebugUtilsMessengerEXT.
+ *
+ * \param[in] p_void_debug_msg The debug messenger to be destroyed.
+ */
+static void vulkan_debug_msg_deinit(void* p_void_debug_msg_del_struct);
+
+/**
  * Proxy function for vkCreateDebugUtilsMessengerEXT.
  *
  * \return VkResult.
@@ -84,7 +110,7 @@ static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
 static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger,
     const VkAllocationCallbacks* p_allocator);
 
-error_t vulkan_instance_init(VkInstance* p_instance)
+error_t vulkan_instance_init(deletion_stack_t* p_dstack, VkInstance* p_instance)
 {
     if(p_instance == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_instance is NULL", __func__);
@@ -179,7 +205,7 @@ error_t vulkan_instance_init(VkInstance* p_instance)
     // Create instance.
     if(vkCreateInstance(&create_inst_info, VK_NULL_HANDLE, p_instance) != VK_SUCCESS)
         return error_init(ERR_SRC_VULKAN, VULKAN_ERR_INSTANCE, "Failed to create Vulkan instance");
-    LOG_INFO("Vulkan instance created");
+    LOG_DEBUG("Vulkan instance created");
 
     // Free dynamically allocated arrays
     free(required_layers); // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
@@ -187,10 +213,19 @@ error_t vulkan_instance_init(VkInstance* p_instance)
     free(required_extensions); // NOLINT(bugprone-multi-level-implicit-pointer-conversion)
     required_extensions = NULL;
 
+    // Add cleanup
+    error_t err = deletion_stack_push(p_dstack, *p_instance, vulkan_instance_deinit);
+    if(err.code != 0) {
+        vulkan_instance_deinit(*p_instance);
+        return err;
+    }
+
+    LOG_INFO("Vulkan instance initiated");
+
     return SUCCESS;
 }
 
-void vulkan_instance_destroy(void* p_void_instance)
+static void vulkan_instance_deinit(void* p_void_instance)
 {
     LOG_DEBUG("Callback: %s", __func__);
 
@@ -480,7 +515,7 @@ debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, // NOLIN
     return VK_FALSE;
 }
 
-error_t vulkan_instance_debug_msg_init(VkInstance instance, VkDebugUtilsMessengerEXT* p_debug_msg)
+error_t vulkan_debug_msg_init(deletion_stack_t* p_dstack, VkInstance instance, VkDebugUtilsMessengerEXT* p_debug_msg)
 {
     if(instance == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: instance is NULL", __func__);
@@ -512,42 +547,55 @@ error_t vulkan_instance_debug_msg_init(VkInstance instance, VkDebugUtilsMessenge
         return SUCCESS;
     }
 
+    // Add cleanup
+    debug_msg_del_t* p_debug_msg_del = (debug_msg_del_t*)malloc(sizeof(debug_msg_del_t));
+    p_debug_msg_del->instance = instance;
+    p_debug_msg_del->debug_msg = *p_debug_msg;
+
+    error_t err = deletion_stack_push(p_dstack, p_debug_msg_del, vulkan_debug_msg_deinit);
+    if(err.code != 0) {
+        vulkan_debug_msg_deinit(p_debug_msg_del);
+        return err;
+    }
+
     LOG_INFO("Debug messenger initiated");
     return SUCCESS;
 }
 
-void vulkan_instance_debug_msg_destroy(void* p_void_debug_msg_del_struct)
+void vulkan_debug_msg_deinit(void* p_void_debug_msg_del)
 {
-    LOG_DEBUG("Callback: vulkan_instance_debug_messenger_destroy");
+    LOG_DEBUG("Callback: %s", __func__);
 
     // The VkDebugUtilsMessengerEXT object also needs to be cleaned up with a call to
     // vkDestroyDebugUtilsMessengerEXT, which we also need to aquire via a proxy function.
     // We call the detroyer in cleanup.
 
     // NULL check
-    if(p_void_debug_msg_del_struct == NULL) {
+    if(p_void_debug_msg_del == NULL) {
         LOG_ERROR("%s: debug_msg_del_struct is NULL", __func__);
         return;
     }
 
     // Cast struct pointer
-    vulkan_instance_debug_msg_del_struct_t* p_debug_msg_del_struct =
-        (vulkan_instance_debug_msg_del_struct_t*)p_void_debug_msg_del_struct;
+    debug_msg_del_t* p_debug_msg_del = (debug_msg_del_t*)p_void_debug_msg_del;
 
-    if(p_debug_msg_del_struct->instance == NULL) {
+    if(p_debug_msg_del->instance == NULL) {
         LOG_ERROR("%s: instance is NULL", __func__);
         return;
     }
 
-    if(p_debug_msg_del_struct->debug_msg == NULL) {
-        LOG_ERROR("%s: debug_msg is NULL", __func__)
+    if(p_debug_msg_del->debug_msg == NULL) {
+        LOG_ERROR("%s: debug_msg is NULL", __func__);
+        return;
     }
 
     // Destroy debug messenger
-    DestroyDebugUtilsMessengerEXT(p_debug_msg_del_struct->instance, p_debug_msg_del_struct->debug_msg, VK_NULL_HANDLE);
+    DestroyDebugUtilsMessengerEXT(p_debug_msg_del->instance, p_debug_msg_del->debug_msg, VK_NULL_HANDLE);
 
     // Free deletion struct pointer
-    free(p_void_debug_msg_del_struct);
+    free(p_debug_msg_del);
+    p_debug_msg_del = NULL;
+    p_void_debug_msg_del = NULL;
 }
 
 static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,

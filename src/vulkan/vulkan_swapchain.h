@@ -6,15 +6,8 @@
 
 #include "error/error.h"
 
+#include "util/deletion_stack.h"
 #include "vulkan/vulkan_types.h"
-
-/**
- * Struct used for deleting a debug messenger.
- */
-typedef struct vulkan_swapchain_del_struct_s {
-    VkDevice device;
-    vulkan_swapchain_t vulkan_swapchain;
-} vulkan_swapchain_del_struct_t;
 
 /**
  * \brief Initaite swapchain.
@@ -27,17 +20,7 @@ typedef struct vulkan_swapchain_del_struct_s {
  * objects.
  * \return True if successful, else false.
  */
-error_t vulkan_swapchain_init(
-    VkDevice device, VkPhysicalDevice physical_device, VkSurfaceKHR surface, SDL_Window* p_window,
-    vulkan_swapchain_t* p_vulkan_swapchain
-);
-
-/**
- * \brief Destroy vulkan swapchain.
- *
- * \param[in] p_void_vulkan_swapchain_del_struct Pointer to the vulkan_swapchain_del_struct_t containing the
- * swapchain to be deleted.
- */
-void vulkan_swapchain_destroy(void* p_void_vulkan_swapchain_del_struct);
+error_t vulkan_swapchain_init(deletion_stack_t* p_dstack, VkDevice device, VkPhysicalDevice physical_device,
+    VkSurfaceKHR surface, SDL_Window* p_window, vulkan_swapchain_t* p_vulkan_swapchain);
 
 #endif // VULKAN_SWAPCHAIN_H_

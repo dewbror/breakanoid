@@ -5,13 +5,29 @@
 #include "error/vulkan_error.h"
 #include "logger.h"
 
+#include "util/deletion_stack.h"
+
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_cmd.h"
 
-error_t vulkan_cmd_frame_init(VkDevice device, const queue_family_data_t* p_queues, frame_data_t* p_frames)
+/**
+ * Struct for deleting a command pool.
+ */
+typedef struct cmd_pool_del_s {
+    VkDevice device;
+    VkCommandPool cmd_pool;
+} cmd_pool_del_t;
+
+/**
+ * Deinit the command pools.
+ */
+void vulkan_cmd_pool_deinit(void* p_void_cmd_pool_del_struct);
+
+error_t vulkan_cmd_frame_init(deletion_stack_t* p_dstack, VkDevice device, const queue_family_data_t* p_queues,
+    frame_data_t* p_frames)
 {
     if(device == NULL)
-        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_engine is NULL", __func__);
+        return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: device is NULL", __func__);
 
     if(p_queues == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: p_queues is NULL", __func__);
@@ -43,12 +59,25 @@ error_t vulkan_cmd_frame_init(VkDevice device, const queue_family_data_t* p_queu
         }
     }
 
-    LOG_INFO("Frame command structures created");
+    // CLEANUP
+    for(int i = 0; i < FRAMES_IN_FLIGHT; ++i) {
+        cmd_pool_del_t* p_cmd_pool = (cmd_pool_del_t*)malloc(sizeof(cmd_pool_del_t));
+        p_cmd_pool->device = device;
+        p_cmd_pool->cmd_pool = p_frames[i].cmd_pool;
+
+        error_t err = deletion_stack_push(p_dstack, p_cmd_pool, vulkan_cmd_pool_deinit);
+        if(err.code != 0) {
+            vulkan_cmd_pool_deinit(p_cmd_pool);
+            return err;
+        }
+    }
+
+    LOG_DEBUG("%s: Successful", __func__);
 
     return SUCCESS;
 }
 
-error_t vulkan_cmd_imm_init(VkDevice device, const queue_family_data_t* p_queues, VkCommandPool* p_imm_cmd_pool,
+error_t vulkan_cmd_imm_init(deletion_stack_t* p_dstack, VkDevice device, const queue_family_data_t* p_queues, VkCommandPool* p_imm_cmd_pool,
     VkCommandBuffer* p_imm_cmd_buff)
 {
     if(device == NULL)
@@ -77,30 +106,41 @@ error_t vulkan_cmd_imm_init(VkDevice device, const queue_family_data_t* p_queues
     if(vkAllocateCommandBuffers(device, &imm_cmd_alloc_info, p_imm_cmd_buff) != VK_SUCCESS)
         return error_init(ERR_SRC_VULKAN, VULKAN_ERR_CMD_BUF, "Failed to create frame command buffer");
 
-    LOG_INFO("Immidiate command structures created");
+    // CLEANUP
+    cmd_pool_del_t* p_cmd_pool = (cmd_pool_del_t*)malloc(sizeof(cmd_pool_del_t));
+    p_cmd_pool->device = device;
+    p_cmd_pool->cmd_pool = *p_imm_cmd_pool;
+
+    error_t err = deletion_stack_push(p_dstack, p_cmd_pool, vulkan_cmd_pool_deinit);
+    if(err.code != 0) {
+        vulkan_cmd_pool_deinit(p_cmd_pool);
+        return err;
+    }
+
+    LOG_DEBUG("%s: Successful", __func__);
 
     return SUCCESS;
 }
 
-void vulkan_cmd_pool_destroy(void* p_void_cmd_del_struct)
+void vulkan_cmd_pool_deinit(void* p_void_cmd_del)
 {
-    LOG_DEBUG("Callback: vulkan_cmd_pool_destroy");
+    LOG_DEBUG("Callback: %s", __func__);
 
-    if(p_void_cmd_del_struct == NULL) {
+    if(p_void_cmd_del == NULL) {
         LOG_ERROR("%s: p_void_cmd_del_struct is NULL", __func__);
         return;
     }
 
     // Cast pointer
-    cmd_pool_del_struct_t* p_cmd_pool_del_struct = (cmd_pool_del_struct_t*)p_void_cmd_del_struct;
+    cmd_pool_del_t* p_cmd_pool_del = (cmd_pool_del_t*)p_void_cmd_del;
 
     // NULL check struct fields
 
-    vkDestroyCommandPool(p_cmd_pool_del_struct->device, p_cmd_pool_del_struct->cmd_pool, VK_NULL_HANDLE);
+    vkDestroyCommandPool(p_cmd_pool_del->device, p_cmd_pool_del->cmd_pool, VK_NULL_HANDLE);
 
-    free(p_cmd_pool_del_struct);
-    p_cmd_pool_del_struct = NULL;
-    p_void_cmd_del_struct = NULL;
+    free(p_cmd_pool_del);
+    p_cmd_pool_del = NULL;
+    p_void_cmd_del = NULL;
 }
 
 VkCommandBufferSubmitInfo vulkan_cmd_get_buffer_submit_info(VkCommandBuffer cmd)

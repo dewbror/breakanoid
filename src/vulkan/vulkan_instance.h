@@ -4,14 +4,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "error/error.h"
-
-/**
- * Struct used for deleting a debug messenger.
- */
-typedef struct vulkan_instance_debug_msg_del_struct_s {
-    VkInstance instance;
-    VkDebugUtilsMessengerEXT debug_msg;
-} vulkan_instance_debug_msg_del_struct_t;
+#include "util/deletion_stack.h"
 
 /**
  * \brief Initiate a vulkan instance.
@@ -19,14 +12,7 @@ typedef struct vulkan_instance_debug_msg_del_struct_s {
  * \param[out] p_instance Pointer to the Vkinstance to be initiated.
  * \return True if successful, else false.
  */
-error_t vulkan_instance_init(VkInstance* p_instance);
-
-/**
- * \brief Destroy the vulkan instance.
- *
- * \param[in] p_void_instance The vulkan instance to be destroyed.
- */
-void vulkan_instance_destroy(void* p_void_instance);
+error_t vulkan_instance_init(deletion_stack_t* p_dstack, VkInstance* p_instance);
 
 /**
  * \brief Initiate the debug messenger
@@ -40,14 +26,7 @@ void vulkan_instance_destroy(void* p_void_instance);
  * \param[out] p_debug_messenger Pointer to the debug messenger to be initiated.
  * \return True if successful, else false.
  */
-error_t vulkan_instance_debug_msg_init(VkInstance instance, VkDebugUtilsMessengerEXT* p_debug_messenger);
+error_t vulkan_debug_msg_init(deletion_stack_t* p_dstack, VkInstance instance,
+    VkDebugUtilsMessengerEXT* p_debug_messenger);
 
-/**
- * \brief Destroy a debug messenger.
- *
- * Destroy a debug messenger using vkDestroyDebugUtilsMessengerEXT.
- *
- * \param[in] p_void_debug_msg The debug messenger to be destroyed.
- */
-void vulkan_instance_debug_msg_destroy(void* p_void_debug_msg_del_struct);
 #endif // VULKAN_INSTANCE_H_

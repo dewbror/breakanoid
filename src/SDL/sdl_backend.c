@@ -6,15 +6,23 @@
 #include "error/error.h"
 #include "error/sdl_error.h"
 #include "logger.h"
+#include "util/deletion_stack.h"
 
-error_t sdl_backend_init(SDL_Window** pp_window, const int width, const int height)
+/**
+ * \brief Destroy SDL backend.
+ *
+ * \param[in] p_void_window Pointer to SDL window to be destroyed.
+ */
+static void sdl_backend_deinit(void* p_void_window);
+
+error_t sdl_backend_init(deletion_stack_t* p_del_stack, const int width, const int height, SDL_Window** pp_window)
 {
     // Initialize SDL
     if(!SDL_InitSubSystem(SDL_INIT_VIDEO))
         return error_init(ERR_SRC_SDL, SDL_ERR_INIT_SUB_SYSTEM, "%s: Failed to initialize SDL sub system: %s", __func__,
             SDL_GetError());
 
-    LOG_INFO("SDL sub system initialized");
+    LOG_INFO("SDL library initiated");
 
     // Create SDL window
     SDL_WindowFlags windowFlags = SDL_WINDOW_VULKAN | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_HIGH_PIXEL_DENSITY |
@@ -26,14 +34,21 @@ error_t sdl_backend_init(SDL_Window** pp_window, const int width, const int heig
 
     LOG_INFO("SDL window created");
 
-    LOG_INFO("SDL backend successfully initialized");
+    // Add cleanup
+    error_t err = deletion_stack_push(p_del_stack, p_window, sdl_backend_deinit);
+    if(err.code != 0) {
+        sdl_backend_deinit(p_window);
+        return err;
+    }
 
     *pp_window = p_window;
+
+    LOG_DEBUG("%s: Successful", __func__);
 
     return SUCCESS;
 }
 
-void sdl_backend_destroy(void* p_void_window)
+static void sdl_backend_deinit(void* p_void_window)
 {
     LOG_DEBUG("Callback: %s", __func__);
 

@@ -5,16 +5,30 @@
 #include "error/error.h"
 #include "error/vulkan_error.h"
 #include "logger.h"
+#include "util/deletion_stack.h"
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_image.h"
+
+/**
+ * Struct used for deleting an image
+ */
+typedef struct alloc_img_del_s {
+    VkDevice device;
+    allocated_image_t allocated_image;
+} alloc_img_del_t;
+
+/**
+ * Deinitialize a vulkan image.
+ */
+void vulkan_image_deinit(void* p_void_allocated_image_del_struct);
 
 /**
  * \brief blablabla
  */
 static VkImageSubresourceRange img_subresource_Range(VkImageAspectFlags aspect_mask);
 
-error_t vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, uint32_t width, uint32_t height,
-    allocated_image_t* p_allocated_image)
+error_t vulkan_image_create(deletion_stack_t* p_dstack, VkDevice device, VkPhysicalDevice physical_device,
+    uint32_t width, uint32_t height, allocated_image_t* p_allocated_image)
 {
     if(device == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: device is NULL", __func__);
@@ -101,7 +115,18 @@ error_t vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, u
     if(vkCreateImageView(device, &img_view_info, VK_NULL_HANDLE, &p_allocated_image->image_view) != VK_SUCCESS)
         return error_init(ERR_SRC_VULKAN, VULKAN_ERR_IMAGE_VIEW, "Failed to create draw image view");
 
-    LOG_INFO("Image views created");
+    // Add cleanup
+    alloc_img_del_t* p_img_del = (alloc_img_del_t*)malloc(sizeof(alloc_img_del_t));
+    p_img_del->device = device;
+    p_img_del->allocated_image = *p_allocated_image;
+
+    error_t err = deletion_stack_push(p_dstack, p_img_del, vulkan_image_deinit);
+    if(err.code != 0) {
+        vulkan_image_deinit(p_img_del);
+        return err;
+    }
+
+    LOG_DEBUG("%s: Successful", __func__);
 
     return SUCCESS;
 }
@@ -147,11 +172,11 @@ error_t vulkan_image_create(VkDevice device, VkPhysicalDevice physical_device, u
 //     return true;
 // }
 
-void vulkan_image_destroy(void* p_void_allocated_image_del_struct)
+void vulkan_image_deinit(void* p_void_img_del)
 {
     LOG_DEBUG("Callback: vulkan_destroy_image");
 
-    if(p_void_allocated_image_del_struct == NULL) {
+    if(p_void_img_del == NULL) {
         LOG_ERROR("%s: p_void_allocated_image_del_struct is NULL", __func__);
         return;
     }
@@ -159,19 +184,15 @@ void vulkan_image_destroy(void* p_void_allocated_image_del_struct)
     // NULL check struct content
 
     // Cast pointer
-    allocated_image_del_strut_t* p_allocated_image_del_struct =
-        (allocated_image_del_strut_t*)p_void_allocated_image_del_struct;
+    alloc_img_del_t* p_img_del = (alloc_img_del_t*)p_void_img_del;
 
-    vkDestroyImage(p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image,
-        VK_NULL_HANDLE);
-    vkFreeMemory(p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.mem,
-        VK_NULL_HANDLE);
-    vkDestroyImageView(p_allocated_image_del_struct->device, p_allocated_image_del_struct->allocated_image.image_view,
-        VK_NULL_HANDLE);
+    vkDestroyImage(p_img_del->device, p_img_del->allocated_image.image, VK_NULL_HANDLE);
+    vkFreeMemory(p_img_del->device, p_img_del->allocated_image.mem, VK_NULL_HANDLE);
+    vkDestroyImageView(p_img_del->device, p_img_del->allocated_image.image_view, VK_NULL_HANDLE);
 
-    free(p_allocated_image_del_struct);
-    p_allocated_image_del_struct = NULL;
-    p_void_allocated_image_del_struct = NULL;
+    free(p_img_del);
+    p_img_del = NULL;
+    p_void_img_del = NULL;
 }
 
 void vulkan_image_transition(VkCommandBuffer cmd, VkImage img, VkImageLayout old_layout, VkImageLayout new_layout)

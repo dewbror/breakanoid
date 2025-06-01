@@ -2,7 +2,7 @@
 #define SDL_ERROR_H_
 
 /**
- * The SDL error codes
+ * Enum for the SDL error codes
  */
 typedef enum {
     SDL_ERR_NONE = 0,

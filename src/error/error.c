@@ -45,7 +45,7 @@ error_t error_init(const error_src_t src, const int code, const char* fmt, ...)
     return (error_t){msg, src, code};
 }
 
-void error_destroy(error_t* p_err)
+void error_deinit(error_t* p_err)
 {
     if(p_err == NULL) {
         LOG_ERROR("%s: p_err is NULL", __func__);

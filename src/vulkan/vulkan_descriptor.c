@@ -1,19 +1,29 @@
 #include <stdbool.h>
 #include <stdlib.h>
-
 #include <vulkan/vulkan_core.h>
 
 #include "error/error.h"
 #include "error/vulkan_error.h"
 #include "logger.h"
-
+#include "util/deletion_stack.h"
 #include "vulkan/vulkan_types.h"
 #include "vulkan/vulkan_descriptor.h"
+
+/**
+ * Structure for deletion of VkDescriptorSetLayout and VkDescriptorPool.
+ */
+typedef struct desc_del_s {
+    VkDevice device;
+    VkDescriptorSetLayout desc_layout;
+    VkDescriptorPool pool;
+} desc_del_t;
 
 static bool pool_init(VkDevice device, uint32_t max_sets, pool_size_ratio_t* p_pool_ratios, size_t pool_ratios_count,
     VkDescriptorPool* p_pool);
 
-error_t vulkan_descriptor_init(VkDevice device, allocated_image_t* p_draw_image,
+static void vulkan_descriptor_deinit(void* p_void_vulkan_desc_del);
+
+error_t vulkan_descriptor_init(deletion_stack_t* p_dstack, VkDevice device, allocated_image_t* p_draw_image,
     descriptor_allocator_t* p_descriptor_allocator, VkDescriptorSet* p_draw_image_desc,
     VkDescriptorSetLayout* p_draw_image_desc_layout)
 {
@@ -70,21 +80,34 @@ error_t vulkan_descriptor_init(VkDevice device, allocated_image_t* p_draw_image,
 
     vkUpdateDescriptorSets(device, 1, &draw_image_write, 0, VK_NULL_HANDLE);
 
+    // CLEANUP
+    desc_del_t* p_desc_del = (desc_del_t*)malloc(sizeof(desc_del_t));
+    p_desc_del->device = device;
+    p_desc_del->pool = p_descriptor_allocator->pool;
+    p_desc_del->desc_layout = *p_draw_image_desc_layout;
+
+    error_t err = deletion_stack_push(p_dstack, p_desc_del, vulkan_descriptor_deinit);
+    if(err.code != 0) {
+        vulkan_descriptor_deinit(p_desc_del);
+        return err;
+    }
+
     return SUCCESS;
 }
 
-void vulkan_descriptor_destroy(void* p_void_vulkan_desc_del)
+static void vulkan_descriptor_deinit(void* p_void_desc_del)
 {
     LOG_DEBUG("Callback: %s", __func__);
+
     // Cast pointer
-    vulkan_desc_del_t* p_vulkan_desc = (vulkan_desc_del_t*)p_void_vulkan_desc_del;
+    desc_del_t* p_desc_del = (desc_del_t*)p_void_desc_del;
 
-    vkDestroyDescriptorPool(p_vulkan_desc->device, p_vulkan_desc->pool, VK_NULL_HANDLE);
-    vkDestroyDescriptorSetLayout(p_vulkan_desc->device, p_vulkan_desc->desc_layout, VK_NULL_HANDLE);
+    vkDestroyDescriptorPool(p_desc_del->device, p_desc_del->pool, VK_NULL_HANDLE);
+    vkDestroyDescriptorSetLayout(p_desc_del->device, p_desc_del->desc_layout, VK_NULL_HANDLE);
 
-    free(p_vulkan_desc);
-    p_vulkan_desc = NULL;
-    p_void_vulkan_desc_del = NULL;
+    free(p_desc_del);
+    p_desc_del = NULL;
+    p_void_desc_del = NULL;
 }
 
 static bool pool_init(VkDevice device, uint32_t max_sets, pool_size_ratio_t* p_pool_ratios,

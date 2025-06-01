@@ -6,6 +6,7 @@
 
 #include "error/error.h"
 
+#include "util/deletion_stack.h"
 #include "vulkan/vulkan_types.h"
 
 /**
@@ -60,13 +61,7 @@ bool vulkan_device_get_queue_families(VkSurfaceKHR surface, VkPhysicalDevice phy
  * \param[out] p_queues Pointer to the queue_family_data_t which will hold the queue information.
  * \return True if successful, else false.
  */
-error_t vulkan_device_init(VkSurfaceKHR surface, VkPhysicalDevice physical_device, VkDevice* p_device,
+error_t vulkan_device_init(deletion_stack_t* p_dstack, VkSurfaceKHR surface, VkPhysicalDevice physical_device, VkDevice* p_device,
     queue_family_data_t* p_queue_family_data);
-/**
- * \brief Destroy a vulkan device.
- *
- * \param[in] p_void_device The vulkan device to be destroyed.
- */
-void vulkan_device_destroy(void* p_void_device);
 
 #endif // VULKAN_DEVICE_H_

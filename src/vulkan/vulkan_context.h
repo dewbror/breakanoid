@@ -1,18 +1,18 @@
-#ifndef VULKAN_ENGINE_H_
-#define VULKAN_ENGINE_H_
+#ifndef VULKAN_CONTEXT_H_
+#define VULKAN_CONTEXT_H_
 
 #include <stdbool.h>
+
 #include <vulkan/vulkan_core.h>
 
 #include "error/error.h"
-#include "vulkan/vulkan_descriptor.h"
 #include "vulkan/vulkan_types.h"
 
 /**
  * A struct containing all the necessary vulkan fields.
  */
-typedef struct vulkan_engine_s {
-    struct deletion_stack_s* p_main_del_stack;
+typedef struct vulkan_context_s {
+    struct deletion_stack_s* p_dstack; // Make embedded struct?
     struct SDL_Window* p_window;
     VkExtent2D window_extent;
     VkInstance instance;
@@ -26,7 +26,7 @@ typedef struct vulkan_engine_s {
     allocated_image_t draw_image;
     VkExtent2D draw_extent;
     long frame_count;
-    frame_data_t p_frames[FRAMES_IN_FLIGHT]; // TODO: Rename to p_frames
+    frame_data_t p_frames[FRAMES_IN_FLIGHT];
     VkCommandPool imm_cmd_pool;
     VkCommandBuffer imm_cmd_buffer;
     VkFence imm_fence;
@@ -35,28 +35,28 @@ typedef struct vulkan_engine_s {
     VkDescriptorSetLayout draw_img_desc_layout;
     VkPipeline gradient_pipline;
     VkPipelineLayout gradient_pipline_layout;
-} vulkan_engine_t;
+} vulkan_context_t;
 
 /**
- * Initiate the vulkan engine.
+ * Initiate the vulkan context.
  *
- * \param[in] p_engine Pointer to the vulkan_engine to be initiated. Must be deleted using vulkan_engine_destroy before
+ * \param[in] p_vkctx Pointer to the vulkan_context to be initiated. Must be deleted using vulkan_deinit before
  * exiting game.
  *
  * \return True if successful, false if failed.
  */
-error_t vulkan_engine_init(vulkan_engine_t* p_engine);
+error_t vulkan_init(vulkan_context_t* p_vkctx);
 
 /**
  * Used to delete a vulkan_engine. All deletion/destruction of objects is currently handled by the deletion queue. All
  * this function does currently is flush the deletion queue.
  *
- * \param[in] p_engine Pointer to the vulkan_engine.
+ * \param[in] p_vkctx Pointer to the vulkan_context.
  *
  * \return True if successful, false otherwise
  */
-error_t vulkan_engine_destroy(vulkan_engine_t* p_engine);
+error_t vulkan_deinit(vulkan_context_t* p_vkctx);
 
-void vulkan_engine_render_and_present_frame(vulkan_engine_t* p_engine);
+void vulkan_render_and_present_frame(vulkan_context_t* p_vkctx);
 
-#endif // VULKAN_ENGINE_H_
+#endif // VULKAN_CONTEXT_H_

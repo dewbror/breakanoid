@@ -3,24 +3,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <vulkan/vulkan_core.h>
 
 #include "error/error.h"
 #include "error/vulkan_error.h"
-
 #include "logger.h"
+#include "util/deletion_stack.h"
 #include "vulkan/vulkan_pipeline.h"
 
-static error_t background_pipeline_init(VkDevice device, VkPhysicalDevice physical_device, VkExtent2D window_extent,
+typedef struct pipeline_del_s {
+    VkDevice device;
+    VkPipelineLayout layout;
+    VkPipeline pipeline;
+} pipeline_del_t;
+
+static void vulkan_pipeline_deinit(void* p_void_vulkan_pipeline_del);
+
+static error_t background_pipeline_init(deletion_stack_t* p_dstack, VkDevice device, VkPhysicalDevice physical_device, VkExtent2D window_extent,
     VkDescriptorSetLayout* p_draw_image_desc_layout, VkPipelineLayout* p_gradient_pipeline_layout,
     VkPipeline* p_gradient_pipeline);
 
-error_t vulkan_pipeline_init(VkDevice device, VkPhysicalDevice physical_device, VkExtent2D window_extent,
+error_t vulkan_pipeline_init(deletion_stack_t* p_dstack, VkDevice device, VkPhysicalDevice physical_device, VkExtent2D window_extent,
     VkDescriptorSetLayout* p_draw_image_desc_layout, VkPipelineLayout* p_gradient_pipeline_layout,
     VkPipeline* p_gradient_pipeline)
 {
-    error_t err = background_pipeline_init(device, physical_device, window_extent, p_draw_image_desc_layout,
+    error_t err = background_pipeline_init(p_dstack, device, physical_device, window_extent, p_draw_image_desc_layout,
         p_gradient_pipeline_layout, p_gradient_pipeline);
     if(err.code != 0)
         return err;
@@ -30,7 +37,7 @@ error_t vulkan_pipeline_init(VkDevice device, VkPhysicalDevice physical_device, 
     return SUCCESS;
 }
 
-static error_t background_pipeline_init(VkDevice device, VkPhysicalDevice physical_device, VkExtent2D window_extent,
+static error_t background_pipeline_init(deletion_stack_t* p_dstack, VkDevice device, VkPhysicalDevice physical_device, VkExtent2D window_extent,
     VkDescriptorSetLayout* p_draw_image_desc_layout, VkPipelineLayout* p_gradient_pipeline_layout,
     VkPipeline* p_gradient_pipeline)
 {
@@ -51,7 +58,7 @@ static error_t background_pipeline_init(VkDevice device, VkPhysicalDevice physic
     if(vkCreatePipelineLayout(device, &comp_layout_info, VK_NULL_HANDLE, p_gradient_pipeline_layout) != VK_SUCCESS)
         return error_init(ERR_SRC_VULKAN, VULKAN_ERR_CREATE_PIPELINE_LAYOUT, "Failed to create Vulkan pipeline layout");
 
-    LOG_INFO("Background pipeline layout created");
+    LOG_DEBUG("Background pipeline layout created");
 
     LOG_DEBUG("Creating compute shader module");
     LOG_DEBUG("Opening shader file");
@@ -150,22 +157,35 @@ static error_t background_pipeline_init(VkDevice device, VkPhysicalDevice physic
     // Safe to destroy after pipline has been created
     vkDestroyShaderModule(device, comp_draw_shader, VK_NULL_HANDLE);
 
-    LOG_INFO("Vulkan background pipeline initiated");
+    // CLEANUP
+
+    pipeline_del_t* p_pipeline_del = (pipeline_del_t*)malloc(sizeof(pipeline_del_t));
+    p_pipeline_del->device = device;
+    p_pipeline_del->layout = *p_gradient_pipeline_layout;
+    p_pipeline_del->pipeline = *p_gradient_pipeline;
+
+    error_t err = deletion_stack_push(p_dstack, p_pipeline_del, vulkan_pipeline_deinit);
+    if(err.code != 0) {
+        vulkan_pipeline_deinit(p_pipeline_del);
+        return err;
+    }
+
+    LOG_DEBUG("Vulkan background pipeline initiated");
 
     return SUCCESS;
 }
 
-void vulkan_pipeline_destroy(void* p_void_vulkan_pipeline_del)
+static void vulkan_pipeline_deinit(void* p_void_pipeline_del)
 {
     LOG_DEBUG("Callback: %s", __func__);
 
     // Cast pointer
-    vulkan_pipeline_del_t* p_vulkan_pipeline_del = (vulkan_pipeline_del_t*)p_void_vulkan_pipeline_del;
+    pipeline_del_t* p_pipeline_del = (pipeline_del_t*)p_void_pipeline_del;
 
-    vkDestroyPipelineLayout(p_vulkan_pipeline_del->device, p_vulkan_pipeline_del->layout, VK_NULL_HANDLE);
-    vkDestroyPipeline(p_vulkan_pipeline_del->device, p_vulkan_pipeline_del->pipeline, VK_NULL_HANDLE);
+    vkDestroyPipelineLayout(p_pipeline_del->device, p_pipeline_del->layout, VK_NULL_HANDLE);
+    vkDestroyPipeline(p_pipeline_del->device, p_pipeline_del->pipeline, VK_NULL_HANDLE);
 
-    free(p_vulkan_pipeline_del);
-    p_vulkan_pipeline_del = NULL;
-    p_void_vulkan_pipeline_del = NULL;
+    free(p_pipeline_del);
+    p_pipeline_del = NULL;
+    p_void_pipeline_del = NULL;
 }

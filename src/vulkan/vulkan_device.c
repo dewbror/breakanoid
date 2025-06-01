@@ -7,6 +7,7 @@
 #include "error/error.h"
 #include "error/vulkan_error.h"
 #include "logger.h"
+#include "util/deletion_stack.h"
 #include "util/strbool.h"
 #include "vulkan/vulkan_device.h"
 
@@ -40,6 +41,13 @@ static bool is_device_suitable(VkSurfaceKHR surface, VkPhysicalDevice physical_d
  * \return True if all required device extensions are supported by the device, false if not.
  */
 static bool check_device_extension_support(VkPhysicalDevice physical_device);
+
+/**
+ * \brief Deinit a vulkan device.
+ *
+ * \param[in] p_void_device The vulkan device to be deinitialized.
+ */
+static void vulkan_device_deinit(void* p_void_device);
 
 error_t vulkan_physical_device_init(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* p_physical_device)
 {
@@ -404,8 +412,8 @@ bool vulkan_device_get_swapchain_support(VkSurfaceKHR surface, VkPhysicalDevice 
     return true;
 }
 
-error_t vulkan_device_init(VkSurfaceKHR surface, VkPhysicalDevice physical_device, VkDevice* p_device,
-    queue_family_data_t* p_queues)
+error_t vulkan_device_init(deletion_stack_t* p_dstack, VkSurfaceKHR surface, VkPhysicalDevice physical_device,
+    VkDevice* p_device, queue_family_data_t* p_queues)
 {
     if(surface == NULL)
         return error_init(ERR_SRC_CORE, ERR_NULL_ARG, "%s: surface is NULL", __func__);
@@ -510,7 +518,7 @@ error_t vulkan_device_init(VkSurfaceKHR surface, VkPhysicalDevice physical_devic
     if(vkCreateDevice(physical_device, &create_dev_info, VK_NULL_HANDLE, p_device) != VK_SUCCESS)
         return error_init(ERR_SRC_VULKAN, VULKAN_ERR_DEVICE, "Failed to create vulkan logical device");
 
-    LOG_INFO("Vulkan logical device created");
+    LOG_DEBUG("Vulkan device created");
 
     // The queues are automatically created along with the logical device.
     // We can use the vkGetDeviceQueue function to retrieve queue handles for each queue family. The parameters are
@@ -525,12 +533,21 @@ error_t vulkan_device_init(VkSurfaceKHR surface, VkPhysicalDevice physical_devic
     free(q_create_infos);
     q_create_infos = NULL;
 
+    // Add cleanup
+    error_t err = deletion_stack_push(p_dstack, *p_device, vulkan_device_deinit);
+    if(err.code != 0) {
+        vulkan_device_deinit(*p_device);
+        return err;
+    }
+
+    LOG_INFO("Vulkan device initiated");
+
     return SUCCESS;
 }
 
-void vulkan_device_destroy(void* p_void_device)
+static void vulkan_device_deinit(void* p_void_device)
 {
-    LOG_DEBUG("Callback: vulkan_device_destroy");
+    LOG_DEBUG("Callback: %s", __func__);
 
     if(p_void_device == NULL) {
         LOG_ERROR("vulkan_device_destroy: device is NULL");

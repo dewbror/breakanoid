@@ -59,6 +59,8 @@ target_link_libraries(cimgui_lib PUBLIC imgui_lib)
 file(GLOB_RECURSE SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.c)
 # Remove main.c from the list, we dont want it in the static lib
 list(REMOVE_ITEM SRC ${CMAKE_CURRENT_SOURCE_DIR}/main.c)
+list(REMOVE_ITEM SRC ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.c)
+
 
 # Add main code as a library
 add_library(break_lib STATIC ${SRC})

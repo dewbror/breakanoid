@@ -16,7 +16,7 @@
 #include "error/error.h"
 #include "version.h"
 #include "logger.h"
-#include "vulkan/vulkan_engine.h"
+#include "vulkan/vulkan_context.h"
 #include "game/game.h"
 
 int main(int argc, char** argv)
@@ -37,27 +37,27 @@ int main(int argc, char** argv)
 
     int success = 0;
 
-    vulkan_engine_t engine;
-    error_t err = vulkan_engine_init(&engine);
+    vulkan_context_t vkctx;
+    error_t err = vulkan_init(&vkctx);
     success += err.code;
     if(err.code != 0) {
-        LOG_ERROR("Failed to initiate vulkan engine: %s", err.msg);
-        error_destroy(&err);
+        LOG_ERROR("Failed to initiate vulkan context: %s", err.msg);
+        error_deinit(&err);
     }
     else {
         // vulkan engine initiated successfully, start game
         game_t game;
-        game_init(&engine, &game);
-        game_run(&engine, &game);
-        game_destroy(&game);
+        game_init(&vkctx, &game);
+        game_run(&vkctx, &game);
+        game_deinit(&game);
     }
 
     // Destroy vulkan engine
-    err = vulkan_engine_destroy(&engine);
+    err = vulkan_deinit(&vkctx);
     success += err.code;
     if(err.code != 0) {
-        LOG_ERROR("Failed to destroy vulkan engine: %s", err.msg);
-        error_destroy(&err);
+        LOG_ERROR("Failed to destroy vulkan context: %s", err.msg);
+        error_deinit(&err);
     }
 
     // Close logger
@@ -65,11 +65,11 @@ int main(int argc, char** argv)
 
     // Exit program
     if(success != 0) {
-        LOG_ERROR("Exiting with failure");
+        LOG_ERROR("Exit: %d", EXIT_FAILURE);
         return EXIT_FAILURE;
     }
     else {
-        LOG_INFO("Exiting with success");
+        LOG_INFO("Exit: %d", EXIT_SUCCESS);
         return EXIT_SUCCESS;
     }
 }

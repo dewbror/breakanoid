@@ -19,7 +19,7 @@ deletion_stack_t* deletion_stack_init(void)
     p_queue->p_first = NULL;
     p_queue->p_last = NULL;
 
-    LOG_DEBUG("%s: init successful", __func__);
+    LOG_DEBUG("%s: Successful", __func__);
 
     return p_queue;
 }
@@ -50,7 +50,7 @@ error_t deletion_stack_push(deletion_stack_t* p_stack, void* p_resource, void (*
 
     p_stack->p_last = p_new_node;
 
-    LOG_DEBUG("Push on deletion stack successful");
+    LOG_DEBUG("%s: Successful", __func__);
 
     return SUCCESS;
 }
@@ -88,7 +88,7 @@ error_t deletion_stack_flush(deletion_stack_t** pp_queue)
     free(p_queue);
     *pp_queue = NULL;
 
-    LOG_DEBUG("Deletion stack flushed");
+    LOG_DEBUG("%s: Successful", __func__);
 
     return SUCCESS;
 }
